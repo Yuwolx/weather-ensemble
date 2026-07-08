@@ -50,14 +50,17 @@ check('column segment heights sum to ~100%', [...cols].every((c) => {
 check('hero "지금" probability is numeric', /^\d+$/.test(txt('#vNow') || ''), txt('#vNow'));
 check('hero meta shows temp + wind', /기온.*바람/.test(txt('#vNowMeta') || ''), txt('#vNowMeta'));
 check('hero read line is populated', (txt('#vLine') || '').length > 5, txt('#vLine'));
-check('trust line populated', /멤버.*기관/.test(txt('#vTrust') || ''), txt('#vTrust'));
+check('member-count line removed from rail', !d.getElementById('vTrust'));
 check('daily digest populated', (txt('#digest') || '').length > 5, txt('#digest'));
 check('region label set', (txt('#vRegion') || '').includes('수원'), txt('#vRegion'));
-check('temp band rendered per hour', d.querySelectorAll('#tempRow .temp-col').length === cols.length,
-  `temp cols=${d.querySelectorAll('#tempRow .temp-col').length}`);
-check('temp bars have a median tick', [...d.querySelectorAll('#tempRow .temp-col')].every((c) => c.querySelector('.temp-col__med')));
-check('detail shows temp + rain-amount readouts', d.querySelectorAll('#detail .ro').length >= 3,
+check('temp band is an svg area + median line',
+  !!d.querySelector('#tempRow svg.tempsvg polygon.tempsvg__band') && !!d.querySelector('#tempRow svg.tempsvg polyline.tempsvg__line'));
+check('temp axis shows a high/low label', d.querySelectorAll('#tempAxis span').length === 2);
+check('detail has temp + rain readouts', d.querySelectorAll('#detail .ro').length >= 2,
   `${d.querySelectorAll('#detail .ro').length} readouts`);
+check('detail wind graph restored', !!d.querySelector('#detail .wind__range .wind__median'));
+check('time axis labels every other hour with ticks', d.querySelectorAll('#stripTimes .tick--on').length >= 2,
+  `${d.querySelectorAll('#stripTimes .tick--on').length} labeled`);
 check('day tabs rendered', d.querySelectorAll('#dayTabs .daytab').length >= 1, `${d.querySelectorAll('#dayTabs .daytab').length} tabs`);
 check('exactly one day tab selected', d.querySelectorAll('#dayTabs .daytab[aria-selected="true"]').length === 1);
 check('detail shows 4 scenario bars', d.querySelectorAll('#detail .scen').length === 4);
@@ -67,7 +70,7 @@ check('one column is selected (aria-pressed)', d.querySelectorAll('#stripCols .c
 check('legend has 4 entries', d.querySelectorAll('#legend li').length === 4);
 check('favorites rendered 2 chips', d.querySelectorAll('#favs .chip').length === 2);
 check('overlay hidden after load', d.getElementById('overlay').hidden === true);
-check('wind readout rendered (m/s)', [...d.querySelectorAll('#detail .ro')].some((r) => /m\/s/.test(r.textContent)));
+check('wind readout shows m/s', /m\/s/.test(d.querySelector('#detail .windblock')?.textContent || ''));
 
 // interaction paths: switch to tomorrow, then open the table
 const tabs = d.querySelectorAll('#dayTabs .daytab');

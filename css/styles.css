@@ -313,16 +313,6 @@ body {
   text-wrap: pretty;
 }
 
-/* trust line pinned to the bottom of the rail */
-.trust {
-  margin: auto 0 0;
-  padding-top: 18px;
-  border-top: 1px solid var(--hairline);
-  font-family: var(--mono);
-  font-size: 11.5px;
-  color: var(--ink-faint);
-}
-
 /* ---------------------------------------------------- Instrument canvas */
 .canvas {
   flex: 1;
@@ -441,7 +431,7 @@ body {
   position: relative;
   width: 26px;
   flex: none;
-  height: 216px;
+  height: 150px;
 }
 .strip__axis span {
   position: absolute;
@@ -456,7 +446,7 @@ body {
   display: flex;
   gap: 4px;
   align-items: flex-end;
-  height: 216px;
+  height: 150px;
   flex: 1;
   min-width: 0;
 }
@@ -531,52 +521,36 @@ body {
   color: var(--brand);
   white-space: nowrap;
 }
-/* Temperature band row — vertical p10–p90 bars + median tick, aligned to precip */
-.temprow {
+/* Temperature band — continuous p10–p90 area + median line (SVG), aligned to precip */
+.chartblock--temp .strip__axis {
+  height: 56px;
+}
+#tempRow {
   position: relative;
-  display: flex;
-  gap: 4px;
-  align-items: flex-end;
-  height: 78px;
+  height: 56px;
   flex: 1;
   min-width: 0;
 }
-.temp-col {
-  position: relative;
-  flex: 1 1 0;
-  min-width: 0;
+.tempsvg {
+  width: 100%;
   height: 100%;
+  display: block;
+  overflow: visible;
 }
-.temp-col__bar {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 62%;
-  min-width: 3px;
-  background: var(--temp-band);
-  border-radius: 3px;
+.tempsvg__band {
+  fill: var(--temp-band);
 }
-.temp-col__med {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 62%;
-  min-width: 3px;
-  height: 2px;
-  background: var(--temp-warm);
-  border-radius: 1px;
-}
-.temp-col.is-sel .temp-col__bar {
-  background: rgba(224, 123, 57, 0.34);
-}
-.temp-col.is-sel .temp-col__med {
-  box-shadow: 0 0 0 2px rgba(224, 123, 57, 0.25);
+.tempsvg__line {
+  stroke: var(--temp-warm);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
 .strip__times {
   display: flex;
   gap: 4px;
-  margin-top: 9px;
+  margin-top: 8px;
   padding-left: 36px;
 }
 .strip__times span {
@@ -587,6 +561,15 @@ body {
   font-size: 10px;
   color: var(--ink-faint);
   white-space: nowrap;
+}
+/* a small tick above labeled hours so each bar's time is traceable */
+.strip__times span.tick--on::before {
+  content: "";
+  display: block;
+  width: 1px;
+  height: 4px;
+  margin: 0 auto 3px;
+  background: var(--hairline-strong);
 }
 .strip__times span.tick--day {
   color: var(--ink-muted);
@@ -717,13 +700,46 @@ body {
   font-size: 12px;
   color: var(--ink-subtle);
 }
-.detail__note {
-  margin: 4px 0 0;
-  padding-top: 14px;
-  border-top: 1px solid var(--hairline);
+/* wind readout keeps a little range graph (p10–p90 band + median tick) */
+.wind__val {
   font-family: var(--mono);
-  font-size: 11.5px;
-  color: var(--ink-faint);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.wind__unit {
+  font-size: 13px;
+  color: var(--ink-subtle);
+  margin-left: 4px;
+}
+.wind__range {
+  margin-top: 12px;
+  height: 6px;
+  background: var(--hairline);
+  border-radius: 3px;
+  position: relative;
+}
+.wind__band {
+  position: absolute;
+  height: 100%;
+  background: var(--wind);
+  border-radius: 3px;
+  opacity: 0.4;
+}
+.wind__median {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 12px;
+  background: var(--wind);
+  border-radius: 1px;
+}
+.wind__spread {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-subtle);
 }
 
 /* Method footer */

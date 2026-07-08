@@ -26,7 +26,7 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const refs = {
   overlay: $('overlay'), overlayMsg: $('overlayMsg'), spinner: $('spinner'), retry: $('retryBtn'),
-  hero: { region: $('vRegion'), updated: $('vUpdated'), now: $('vNow'), meta: $('vNowMeta'), line: $('vLine'), trust: $('vTrust') },
+  hero: { region: $('vRegion'), updated: $('vUpdated'), now: $('vNow'), meta: $('vNowMeta'), line: $('vLine') },
   strip: { axis: $('stripAxisY'), cols: $('stripCols'), times: $('stripTimes') },
   temp: { axis: $('tempAxis'), row: $('tempRow') },
   digest: $('digest'),
@@ -116,7 +116,6 @@ function renderHero() {
   const next24 = state.all.slice(0, SUMMARY_HOURS);
   const now = state.all[0];
   const v = verdict(next24);
-  const { memberCount, modelCount } = state.meta;
 
   ui.renderHero(refs.hero, {
     region: `${state.region.sido ? state.region.sido + ' ' : ''}${state.region.name}`,
@@ -125,7 +124,6 @@ function renderHero() {
     tone: v.tone,
     meta: `기온 ${deg(now.temp.median)} · 바람 ${ms(now.wind.median)} m/s`,
     line: v.line,
-    trust: `${memberCount}개 멤버 · ${modelCount}개 기관 앙상블`,
   });
 }
 
@@ -178,7 +176,7 @@ function renderCanvas() {
       else ui.showTooltip(state.hours[i], anchor, state.todayDate);
     },
   });
-  ui.renderTempRow(refs.temp, { hours: state.hours, selectedIndex: state.selected });
+  ui.renderTempArea(refs.temp, { hours: state.hours });
   renderDetail();
   if (refs.tableToggle.getAttribute('aria-expanded') === 'true') {
     ui.renderTable(refs.tableWrap, { analyzed: state.hours, todayDate: state.todayDate });
@@ -198,9 +196,6 @@ function selectHour(i) {
   state.selected = i;
   refs.strip.cols.querySelectorAll('.col').forEach((c) => {
     c.setAttribute('aria-pressed', String(Number(c.dataset.i) === i));
-  });
-  refs.temp.row.querySelectorAll('.temp-col').forEach((c) => {
-    c.classList.toggle('is-sel', Number(c.dataset.i) === i);
   });
   renderDetail();
 }
