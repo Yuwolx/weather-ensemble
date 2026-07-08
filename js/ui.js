@@ -3,6 +3,7 @@
 // UI easy to reason about: same inputs → same markup.
 
 import { PRECIP_BUCKETS } from './config.js';
+import { agreement } from './stats.js';
 import { pct, mm, ms, deg, hourOf, hourLabel, dayLabel, dateOf } from './format.js';
 
 const SEG_ORDER = ['dry', 'light', 'mod', 'heavy']; // top → bottom in the column
@@ -52,13 +53,12 @@ export function renderLegend(container) {
 
 const TONE_VAR = { dry: 'var(--tone-dry)', maybe: 'var(--tone-maybe)', wet: 'var(--tone-wet)' };
 
-// The live "right now" readout in the rail: current rain %, current temp/wind,
-// and the plain-language read. Verdict tone drives the accent.
-export function renderHero(refs, { region, updated, nowPctNum, tone, meta, line }) {
+// The rail readout: the plain-language line + current conditions. No single
+// headline number — the scenario board carries the probabilities. Tone drives accent.
+export function renderHero(refs, { region, updated, tone, meta, line }) {
   document.documentElement.style.setProperty('--tone', TONE_VAR[tone]);
   refs.region.textContent = region;
   refs.updated.textContent = updated;
-  refs.now.textContent = nowPctNum;
   refs.meta.textContent = meta;
   refs.line.textContent = line;
 }
@@ -178,67 +178,103 @@ function readout(label, value, sub) {
   ]);
 }
 
-export function renderDetail(container, { analyzedHour, memberCount, modelCount, todayDate }) {
+// The hero board: the selected hour's competing scenarios, each a big tappable row
+// (place your bet). Leading scenario emphasized; alternatives never hidden. This is
+// the protagonist — no single collapsed probability.
+export function renderBoard(container, { analyzedHour, todayDate, bet, onBet }) {
   const a = analyzedHour;
-  const scenarios = PRECIP_BUCKETS.map((b) => {
+  const leadKey = agreement(a.dist).dominantKey;
+
+  const rows = PRECIP_BUCKETS.map((b) => {
     const frac = a.dist.fraction[b.key];
-    return el('div', { class: 'scen' }, [
-      el('div', { class: 'scen__label', text: b.label }),
-      el('div', { class: 'scen__track' }, [
-        el('div', {
-          class: 'scen__fill',
-          style: `width:${frac * 100}%;background:var(--p-${b.key})`,
-        }),
+    const picked = bet && bet.betKey === b.key;
+    const cls = ['scenario'];
+    if (b.key === leadKey) cls.push('is-lead');
+    if (picked) cls.push('is-picked');
+    return el('button', {
+      class: cls.join(' '),
+      type: 'button',
+      'aria-pressed': String(!!picked),
+      onclick: () => onBet(b.key, frac),
+    }, [
+      el('span', { class: 'scenario__label', text: b.label }),
+      el('span', { class: 'scenario__track' }, [
+        el('span', { class: 'scenario__fill', style: `width:${Math.max(frac * 100, 1.5)}%;background:var(--p-${b.key})` }),
       ]),
-      el('div', { class: 'scen__pct', text: pct(frac) }),
+      el('span', { class: 'scenario__pct num', text: pct(frac) }),
+      el('span', { class: 'scenario__pick', text: picked ? '내 선택' : '' }),
     ]);
   });
 
-  const wet = a.rain.wet ?? Math.round(a.rain.probability * a.dist.n);
-  const w = a.wind;
   const t = a.temp;
   const amt = a.amount;
-  const amountSub = amt.p90 > 0 ? `많으면 ${mm(amt.p90)}` : '멤버 대부분 0mm';
-
-  // wind range bar scaled 0..max(12, p90)
+  const w = a.wind;
   const wmax = Math.max(12, w.p90 ?? 0);
   const bandL = ((w.p10 ?? 0) / wmax) * 100;
   const bandW = (((w.p90 ?? 0) - (w.p10 ?? 0)) / wmax) * 100;
   const medL = ((w.median ?? 0) / wmax) * 100;
 
+  const hint = bet
+    ? el('p', { class: 'board__hint board__hint--set' },
+        `선택함: ${labelOf(bet.betKey)} · 이 시각이 지나면 결과를 알려드립니다. (다시 누르면 취소)`)
+    : el('p', { class: 'board__hint' }, '시나리오 하나를 눌러 두면, 지난 뒤 실제로 뭐가 왔는지 알려드립니다.');
+
   container.replaceChildren(
-    el('div', { class: 'detail__grid' }, [
-      el('div', {}, [
-        el('div', { class: 'detail__when' }, [
-          el('h3', { text: `${dayLabel(a.time, todayDate)} ${hourLabel(a.time)}` }),
-          el('span', { class: 'detail__count', text: `${a.dist.n}개 예보 중 ${wet}개가 비` }),
+    el('div', { class: 'board__head' }, [
+      el('h2', { class: 'board__when', text: `${dayLabel(a.time, todayDate)} ${hourLabel(a.time)}` }),
+      el('span', { class: 'board__sub', text: `${a.dist.n}개 예보가 이렇게 갈립니다` }),
+    ]),
+    el('div', { class: 'board__scenarios' }, rows),
+    hint,
+    el('div', { class: 'board__cond' }, [
+      readout('기온', deg(t.median), t.p10 != null ? `${deg(t.p10)}–${deg(t.p90)}` : null),
+      readout('예상 강수량', amt.p50 > 0 ? mm(amt.p50) : '0mm', amt.p90 > 0 ? `많으면 ${mm(amt.p90)}` : '대부분 0mm'),
+      el('div', { class: 'windblock' }, [
+        el('div', { class: 'ro__label', text: '바람' }),
+        el('div', {}, [
+          el('span', { class: 'wind__val num', text: ms(w.median) }),
+          el('span', { class: 'wind__unit', text: 'm/s' }),
         ]),
-        el('div', { class: 'detail__prob num', text: pct(a.rain.probability) }),
-        el('div', { class: 'detail__problabel', text: '이 시각 비 올 확률 (멤버 합의)' }),
-        ...scenarios,
-      ]),
-      el('div', { class: 'detail__side' }, [
-        readout('기온', deg(t.median), t.p10 != null ? `범위 ${deg(t.p10)}–${deg(t.p90)}` : null),
-        readout('예상 강수량', amt.p50 > 0 ? mm(amt.p50) : '0mm', amountSub),
-        el('div', { class: 'windblock' }, [
-          el('div', { class: 'ro__label', text: '바람' }),
-          el('div', {}, [
-            el('span', { class: 'wind__val num', text: ms(w.median) }),
-            el('span', { class: 'wind__unit', text: 'm/s' }),
-          ]),
-          el('div', { class: 'wind__range' }, [
-            el('div', { class: 'wind__band', style: `left:${bandL}%;width:${Math.max(bandW, 1)}%` }),
-            el('div', { class: 'wind__median', style: `left:calc(${medL}% - 1px)` }),
-          ]),
-          el('div', {
-            class: 'wind__spread',
-            text: `대부분 ${ms(w.p10)}–${ms(w.p90)} m/s · 최대 ${ms(w.max)}`,
-          }),
+        el('div', { class: 'wind__range' }, [
+          el('div', { class: 'wind__band', style: `left:${bandL}%;width:${Math.max(bandW, 1)}%` }),
+          el('div', { class: 'wind__median', style: `left:calc(${medL}% - 1px)` }),
         ]),
       ]),
     ]),
   );
 }
+
+// Resolved past bets — the payoff. Shows what you picked, what actually fell, and
+// celebrates when an underdog (a scenario the models doubted) came true.
+export function renderSettled(container, settled, todayDate) {
+  if (!settled.length) {
+    container.hidden = true;
+    container.replaceChildren();
+    return;
+  }
+  container.hidden = false;
+  container.replaceChildren(
+    el('p', { class: 'eyebrow', text: '지난 예측 결과' }),
+    ...settled.map((s) => {
+      const cls = ['settled__row'];
+      if (s.won) cls.push('is-won');
+      if (s.underdog) cls.push('is-underdog');
+      let verdict;
+      if (s.won && s.underdog) verdict = `적중 — 게다가 ${pct(s.betProb)}짜리를 맞혔습니다`;
+      else if (s.won) verdict = '적중';
+      else if (s.underdog) verdict = `${pct(s.actualProb)} ${labelOf(s.actualKey)}가 이겼습니다`;
+      else verdict = `빗나감 — 실제는 ${labelOf(s.actualKey)}`;
+      return el('div', { class: cls.join(' ') }, [
+        el('span', { class: 'settled__when num', text: `${dayLabel(s.time, todayDate)} ${hourLabel(s.time)}` }),
+        el('span', { class: 'settled__pick', text: `내 선택 ${labelOf(s.betKey)}` }),
+        el('span', { class: 'settled__actual', text: `실제 ${labelOf(s.actualKey)} (${mm(s.actualMm)})` }),
+        el('span', { class: 'settled__verdict', text: verdict }),
+      ]);
+    }),
+  );
+}
+
+const labelOf = (key) => bucketOf(key)?.label ?? key;
 
 let tooltipEl = null;
 export function showTooltip(analyzedHour, anchor, todayDate) {

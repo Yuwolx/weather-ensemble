@@ -3,8 +3,9 @@
 
 import { REGIONS } from './regions.js';
 import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM } from './config.js';
-import { loadEnsemble, getCurrentPosition, nearestRegion } from './api.js';
+import { loadEnsemble, loadActuals, getCurrentPosition, nearestRegion } from './api.js';
 import { analyzeHour } from './stats.js';
+import { settleBet, placeBet, getBet, clearBet, allBets } from './bets.js';
 import { verdict, pct, mm, ms, deg, dateOf, hourOf } from './format.js';
 import * as ui from './ui.js';
 
@@ -26,7 +27,9 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const refs = {
   overlay: $('overlay'), overlayMsg: $('overlayMsg'), spinner: $('spinner'), retry: $('retryBtn'),
-  hero: { region: $('vRegion'), updated: $('vUpdated'), now: $('vNow'), meta: $('vNowMeta'), line: $('vLine') },
+  hero: { region: $('vRegion'), updated: $('vUpdated'), meta: $('vNowMeta'), line: $('vLine') },
+  board: $('board'),
+  settled: $('settled'),
   strip: { axis: $('stripAxisY'), cols: $('stripCols'), times: $('stripTimes') },
   temp: { axis: $('tempAxis'), row: $('tempRow') },
   digest: $('digest'),
@@ -99,6 +102,8 @@ async function selectRegion(region) {
     renderHero();
     renderCanvas();
     hideOverlay();
+    // settle any matured bets in the background (doesn't block the UI)
+    resolveSettled(region, key).catch(() => {});
   } catch (err) {
     showError(err.message || '예보를 불러오지 못했습니다.', () => selectRegion(region));
   }
@@ -120,9 +125,8 @@ function renderHero() {
   ui.renderHero(refs.hero, {
     region: `${state.region.sido ? state.region.sido + ' ' : ''}${state.region.name}`,
     updated: `LIVE · ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`,
-    nowPctNum: String(Math.round(now.rain.probability * 100)),
     tone: v.tone,
-    meta: `기온 ${deg(now.temp.median)} · 바람 ${ms(now.wind.median)} m/s`,
+    meta: `지금 기온 ${deg(now.temp.median)} · 바람 ${ms(now.wind.median)} m/s`,
     line: v.line,
   });
 }
@@ -177,19 +181,40 @@ function renderCanvas() {
     },
   });
   ui.renderTempArea(refs.temp, { hours: state.hours });
-  renderDetail();
+  renderBoard();
   if (refs.tableToggle.getAttribute('aria-expanded') === 'true') {
     ui.renderTable(refs.tableWrap, { analyzed: state.hours, todayDate: state.todayDate });
   }
 }
 
-function renderDetail() {
-  ui.renderDetail(refs.detail, {
-    analyzedHour: state.hours[state.selected],
-    memberCount: state.meta.memberCount,
-    modelCount: state.meta.modelCount,
+function renderBoard() {
+  const hour = state.hours[state.selected];
+  ui.renderBoard(refs.board, {
+    analyzedHour: hour,
     todayDate: state.todayDate,
+    bet: getBet(state.region.name, hour.time),
+    onBet: placeOrToggleBet,
   });
+}
+
+// Tap a scenario: place a bet on it, or clear it if it was already the pick.
+function placeOrToggleBet(betKey, betProb) {
+  const hour = state.hours[state.selected];
+  const existing = getBet(state.region.name, hour.time);
+  if (existing && existing.betKey === betKey) {
+    clearBet(state.region.name, hour.time);
+  } else {
+    placeBet({
+      region: state.region.name,
+      lat: state.region.lat,
+      lon: state.region.lon,
+      time: hour.time,
+      betKey,
+      betProb,
+      dist: hour.dist.fraction,
+    });
+  }
+  renderBoard();
 }
 
 function selectHour(i) {
@@ -197,7 +222,24 @@ function selectHour(i) {
   refs.strip.cols.querySelectorAll('.col').forEach((c) => {
     c.setAttribute('aria-pressed', String(Number(c.dataset.i) === i));
   });
-  renderDetail();
+  renderBoard();
+}
+
+// After load, settle any past bets for this region against what actually fell.
+async function resolveSettled(region, nowKey) {
+  const pending = allBets().filter(
+    (b) => b.region === region.name && b.time.slice(0, 13) < nowKey,
+  );
+  if (!pending.length) {
+    ui.renderSettled(refs.settled, [], state.todayDate);
+    return;
+  }
+  const actuals = await loadActuals(region.lat, region.lon);
+  const settled = pending
+    .filter((b) => actuals.has(b.time) && actuals.get(b.time) != null)
+    .map((b) => ({ time: b.time, ...settleBet(b, actuals.get(b.time), PRECIP_BUCKETS) }))
+    .sort((a, b) => (a.time < b.time ? 1 : -1));
+  ui.renderSettled(refs.settled, settled, state.todayDate);
 }
 
 // ---- favorites -------------------------------------------------------------

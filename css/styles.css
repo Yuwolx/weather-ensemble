@@ -603,84 +603,166 @@ body {
 }
 
 /* Selected-hour detail */
-.detail {
-  margin-top: 40px;
-  padding-top: 30px;
-  border-top: 1px solid var(--hairline);
+/* ===== Board — the bettable scenario hero (the protagonist) ===== */
+.board {
+  margin: 4px 0 8px;
 }
-.detail__grid {
-  display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 48px;
-}
-.detail__when {
+.board__head {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  margin-bottom: 2px;
-}
-.detail__when h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-.detail__count {
-  font-size: 12.5px;
-  color: var(--ink-subtle);
-}
-.detail__prob {
-  font-family: var(--mono);
-  font-size: 44px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--ink);
-  line-height: 1.05;
-  margin: 14px 0 2px;
-}
-.detail__problabel {
-  font-size: 12.5px;
-  color: var(--ink-subtle);
-  margin-bottom: 22px;
-}
-.scen {
-  display: grid;
-  grid-template-columns: 60px 1fr 44px;
-  align-items: center;
   gap: 12px;
-  padding: 9px 0;
-  border-top: 1px solid var(--hairline);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
-.scen:last-child {
-  border-bottom: 1px solid var(--hairline);
+.board__when {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
-.scen__label {
+.board__sub {
   font-size: 13px;
-  color: var(--ink-muted);
+  color: var(--ink-subtle);
 }
-.scen__track {
-  height: 10px;
-  background: var(--hairline);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.scen__fill {
-  height: 100%;
-  border-radius: 3px;
-  min-width: 2px;
-  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.scen__pct {
-  font-family: var(--mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 13px;
-  text-align: right;
-  color: var(--ink);
-}
-.detail__side {
-  padding-top: 4px;
+.board__scenarios {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 8px;
+}
+/* each scenario is a big tappable row — this is where the "볼맛" lives */
+.scenario {
+  display: grid;
+  grid-template-columns: 78px 1fr 52px 52px;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 11px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--sans);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.scenario:hover {
+  background: #f4f6f9;
+}
+.scenario__label {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+.scenario.is-lead .scenario__label {
+  color: var(--ink);
+  font-weight: 700;
+}
+.scenario__track {
+  height: 16px;
+  background: var(--hairline);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.scenario__fill {
+  display: block;
+  height: 100%;
+  border-radius: 8px;
+  min-width: 3px;
+  transform-origin: left;
+  animation: growx 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.scenario__pct {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--ink-muted);
+}
+.scenario.is-lead .scenario__pct {
+  font-size: 20px;
+  color: var(--ink);
+}
+.scenario__pick {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand);
+  text-align: right;
+  white-space: nowrap;
+}
+.scenario.is-picked {
+  background: var(--brand-soft);
+  box-shadow: inset 0 0 0 1.5px var(--brand);
+}
+.scenario.is-picked:hover {
+  background: var(--brand-soft);
+}
+.board__hint {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.board__hint--set {
+  color: var(--brand);
+  font-weight: 500;
+}
+.board__cond {
+  display: flex;
+  gap: 40px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--hairline);
+  flex-wrap: wrap;
+}
+.board__cond .windblock {
+  min-width: 150px;
+}
+
+/* ===== Settled bets — the payoff on return visits ===== */
+.settled {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--hairline);
+}
+.settled__row {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  gap: 16px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 13px;
+}
+.settled .eyebrow {
+  margin-bottom: 12px;
+}
+.settled__when {
+  color: var(--ink-subtle);
+}
+.settled__pick {
+  color: var(--ink-muted);
+}
+.settled__actual {
+  color: var(--ink);
+  font-weight: 500;
+}
+.settled__verdict {
+  text-align: right;
+  font-weight: 700;
+  color: var(--ink-subtle);
+}
+.settled__row.is-won .settled__verdict {
+  color: var(--tone-dry);
+}
+.settled__row.is-underdog {
+  background: rgba(224, 123, 57, 0.05);
+}
+.settled__row.is-underdog .settled__verdict {
+  color: var(--temp-warm);
+}
+
+.ro {
+  padding-top: 4px;
 }
 .ro__label {
   font-size: 12px;
@@ -862,6 +944,14 @@ table.data td .num {
     transform: scaleY(1);
   }
 }
+@keyframes growx {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
 @keyframes pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(25, 158, 112, 0.5);
@@ -912,9 +1002,21 @@ table.data td .num {
     flex-direction: column;
     gap: 14px;
   }
-  .detail__grid {
-    grid-template-columns: 1fr;
-    gap: 26px;
+  .board__cond {
+    gap: 24px;
+  }
+  .scenario {
+    grid-template-columns: 66px 1fr 44px 44px;
+    gap: 10px;
+    padding: 10px 8px;
+  }
+  .settled__row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+  }
+  .settled__verdict {
+    grid-column: 1 / -1;
+    text-align: left;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -98,3 +98,25 @@ export function nearestRegion(lat, lon, regions) {
   }
   return best;
 }
+
+// "What actually fell" for recent past hours — the deterministic forecast endpoint
+// with past_days returns observed-ish hourly precip, which we use to settle bets.
+// Returns a Map of local-ISO hour → precipitation mm.
+export async function loadActuals(lat, lon) {
+  const p = new URLSearchParams({
+    latitude: lat.toFixed(4),
+    longitude: lon.toFixed(4),
+    hourly: 'precipitation',
+    past_days: '2',
+    forecast_days: '1',
+    timezone: 'auto',
+  });
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${p.toString()}`);
+  if (!res.ok) return new Map();
+  const j = await res.json();
+  const t = j.hourly?.time || [];
+  const v = j.hourly?.precipitation || [];
+  const m = new Map();
+  t.forEach((time, i) => m.set(time, v[i]));
+  return m;
+}

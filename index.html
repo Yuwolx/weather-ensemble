@@ -62,18 +62,14 @@
           </button>
         </section>
 
-        <!-- live "right now" readout — the hero state -->
+        <!-- plain read + current conditions (no single headline number) -->
         <section class="now" aria-live="polite">
           <div class="live">
             <span class="live__dot" aria-hidden="true"></span>
             <span id="vUpdated">LIVE</span>
           </div>
-          <div class="now__prob">
-            <span class="num" id="vNow">—</span><span class="now__unit">%</span>
-          </div>
-          <p class="now__cap">지금 비 올 확률 · 멤버 합의</p>
-          <p class="now__meta" id="vNowMeta"></p>
           <p class="now__line" id="vLine">앙상블 예보를 불러오는 중…</p>
+          <p class="now__meta" id="vNowMeta"></p>
         </section>
       </aside>
 
@@ -81,18 +77,22 @@
       <main class="canvas">
         <div class="canvas__head">
           <div class="canvas__title">
-            <p class="eyebrow">시간별 앙상블 분포</p>
-            <p class="canvas__hint">막대를 누르면 그 시각의 시나리오가 아래에 열립니다</p>
+            <p class="eyebrow">경우의 수</p>
+            <p class="canvas__hint">모델마다 다르게 봅니다. 하나를 골라 두면 지난 뒤 결과를 알려드립니다.</p>
           </div>
           <div class="daytabs" id="dayTabs" role="tablist" aria-label="날짜"></div>
         </div>
 
         <p class="digest" id="digest"></p>
 
-        <section class="strip" aria-label="시간별 앙상블 분포">
+        <!-- Hero: the selected hour's scenario spread — bettable -->
+        <section class="board" id="board" aria-label="선택 시각 시나리오"></section>
+
+        <!-- Timeline scrubber: pick a different hour -->
+        <section class="strip" aria-label="시간별 분포">
           <div class="chartblock">
             <div class="chartblock__head">
-              <span class="chartblock__label">강수 확률 분포</span>
+              <span class="chartblock__label">시간별 강수 분포 — 다른 시각을 눌러보세요</span>
               <ul class="legend" id="legend"></ul>
             </div>
             <div class="stripwrap">
@@ -114,7 +114,8 @@
           <div class="strip__times" id="stripTimes" aria-hidden="true"></div>
         </section>
 
-        <section class="detail" id="detail" aria-label="선택한 시각 상세"></section>
+        <!-- Resolved past bets (populated on return visits) -->
+        <section class="settled" id="settled" hidden></section>
 
         <footer class="method">
           <p class="method__src" id="methodText">

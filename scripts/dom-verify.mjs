@@ -11,6 +11,7 @@ const dom = new JSDOM(html, { url: 'http://localhost:8848/', pretendToBeVisual: 
 global.window = dom.window;
 global.document = dom.window.document;
 global.getComputedStyle = dom.window.getComputedStyle;
+Object.defineProperty(globalThis, 'localStorage', { value: dom.window.localStorage, configurable: true });
 // node's global fetch is already available to the app modules; no wrapper needed
 
 const errors = [];
@@ -47,7 +48,7 @@ check('column segment heights sum to ~100%', [...cols].every((c) => {
   const sum = [...c.querySelectorAll('.col__seg')].reduce((s, seg) => s + parseFloat(seg.style.height), 0);
   return Math.abs(sum - 100) < 0.6;
 }));
-check('hero "지금" probability is numeric', /^\d+$/.test(txt('#vNow') || ''), txt('#vNow'));
+check('no single-% hero number (removed)', !d.getElementById('vNow'));
 check('hero meta shows temp + wind', /기온.*바람/.test(txt('#vNowMeta') || ''), txt('#vNowMeta'));
 check('hero read line is populated', (txt('#vLine') || '').length > 5, txt('#vLine'));
 check('member-count line removed from rail', !d.getElementById('vTrust'));
@@ -56,21 +57,34 @@ check('region label set', (txt('#vRegion') || '').includes('수원'), txt('#vReg
 check('temp band is an svg area + median line',
   !!d.querySelector('#tempRow svg.tempsvg polygon.tempsvg__band') && !!d.querySelector('#tempRow svg.tempsvg polyline.tempsvg__line'));
 check('temp axis shows a high/low label', d.querySelectorAll('#tempAxis span').length === 2);
-check('detail has temp + rain readouts', d.querySelectorAll('#detail .ro').length >= 2,
-  `${d.querySelectorAll('#detail .ro').length} readouts`);
-check('detail wind graph restored', !!d.querySelector('#detail .wind__range .wind__median'));
+check('board has temp + rain readouts', d.querySelectorAll('#board .ro').length >= 2,
+  `${d.querySelectorAll('#board .ro').length} readouts`);
+check('board wind graph present', !!d.querySelector('#board .wind__range .wind__median'));
+check('board wind shows m/s', /m\/s/.test(d.querySelector('#board .windblock')?.textContent || ''));
 check('time axis labels every other hour with ticks', d.querySelectorAll('#stripTimes .tick--on').length >= 2,
   `${d.querySelectorAll('#stripTimes .tick--on').length} labeled`);
 check('day tabs rendered', d.querySelectorAll('#dayTabs .daytab').length >= 1, `${d.querySelectorAll('#dayTabs .daytab').length} tabs`);
 check('exactly one day tab selected', d.querySelectorAll('#dayTabs .daytab[aria-selected="true"]').length === 1);
-check('detail shows 4 scenario bars', d.querySelectorAll('#detail .scen').length === 4);
-check('detail probability is a %', /%$/.test(txt('#detail .detail__prob') || ''), txt('#detail .detail__prob'));
+check('board shows 4 bettable scenarios', d.querySelectorAll('#board .scenario').length === 4);
+check('each scenario shows a %', [...d.querySelectorAll('#board .scenario .scenario__pct')].every((e) => /%$/.test(e.textContent)));
+check('exactly one leading scenario highlighted', d.querySelectorAll('#board .scenario.is-lead').length === 1);
+check('settled section hidden with no matured bets', d.getElementById('settled').hidden === true);
 check('exactly one column marked "지금" on today', d.querySelectorAll('#stripCols .col--now').length === 1);
 check('one column is selected (aria-pressed)', d.querySelectorAll('#stripCols .col[aria-pressed="true"]').length === 1);
 check('legend has 4 entries', d.querySelectorAll('#legend li').length === 4);
 check('favorites rendered 2 chips', d.querySelectorAll('#favs .chip').length === 2);
 check('overlay hidden after load', d.getElementById('overlay').hidden === true);
-check('wind readout shows m/s', /m\/s/.test(d.querySelector('#detail .windblock')?.textContent || ''));
+
+// betting interaction: tap a scenario → it becomes "내 선택" and persists
+const firstScenario = d.querySelector('#board .scenario');
+firstScenario.click();
+check('tapping a scenario marks it picked', d.querySelector('#board .scenario.is-picked') != null);
+check('bet persisted to localStorage', [...Array(dom.window.localStorage.length)].some((_, i) =>
+  dom.window.localStorage.key(i).startsWith('wx-bet:')));
+check('picked scenario shows 내 선택 label', /내 선택/.test(d.querySelector('#board .scenario.is-picked')?.textContent || ''));
+// tap again → clears
+d.querySelector('#board .scenario.is-picked').click();
+check('tapping the pick again clears it', d.querySelector('#board .scenario.is-picked') == null);
 
 // interaction paths: switch to tomorrow, then open the table
 const tabs = d.querySelectorAll('#dayTabs .daytab');
