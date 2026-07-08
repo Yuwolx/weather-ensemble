@@ -19,13 +19,22 @@ export function buildEnsembleUrl(lat, lon) {
 }
 
 export async function fetchEnsemble(lat, lon) {
-  const res = await fetch(buildEnsembleUrl(lat, lon));
-  if (!res.ok) {
-    throw new Error(`예보 서버 응답 오류 (${res.status})`);
+  // Never hang forever: abort after 12s so a stalled network fails to a retry.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const res = await fetch(buildEnsembleUrl(lat, lon), { signal: ctrl.signal });
+    if (!res.ok) throw new Error(`예보 서버 응답 오류 (${res.status})`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.reason || '예보 데이터를 불러오지 못했습니다.');
+    return json;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('예보 서버 응답이 너무 느립니다. 다시 시도해 주세요.');
+    if (e instanceof TypeError) throw new Error('예보 서버에 접속하지 못했습니다. 네트워크를 확인해 주세요.');
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-  const json = await res.json();
-  if (json.error) throw new Error(json.reason || '예보 데이터를 불러오지 못했습니다.');
-  return json;
 }
 
 // Strip "precipitation_" / "precipitation_memberNN_" down to the model id, so we can

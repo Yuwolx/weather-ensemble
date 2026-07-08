@@ -254,10 +254,10 @@ body {
   height: 15px;
 }
 
-/* live "right now" readout */
+/* plain read + current conditions */
 .now {
   border-top: 1px solid var(--hairline);
-  padding-top: 22px;
+  padding-top: 18px;
 }
 .live {
   display: flex;
@@ -277,47 +277,26 @@ body {
   box-shadow: 0 0 0 0 rgba(25, 158, 112, 0.5);
   animation: pulse 2.4s ease-out infinite;
 }
-.now__prob {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-  color: var(--tone, var(--tone-wet));
-}
-.now__prob .num {
-  font-size: 68px;
-  font-weight: 600;
-  letter-spacing: -0.04em;
-  line-height: 0.95;
-}
-.now__unit {
-  font-size: 26px;
-  font-weight: 600;
-  font-family: var(--mono);
-}
-.now__cap {
-  margin: 8px 0 0;
-  font-size: 12.5px;
-  color: var(--ink-subtle);
-}
-.now__meta {
-  margin: 12px 0 0;
-  font-family: var(--mono);
-  font-size: 13px;
-  color: var(--ink-muted);
-}
 .now__line {
-  margin: 14px 0 0;
+  margin: 0;
   font-size: 14.5px;
   line-height: 1.5;
-  color: var(--ink-muted);
+  color: var(--ink);
+  font-weight: 500;
   text-wrap: pretty;
+}
+.now__meta {
+  margin: 10px 0 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-subtle);
 }
 
 /* ---------------------------------------------------- Instrument canvas */
 .canvas {
   flex: 1;
   min-width: 0;
-  padding: 26px 40px 60px;
+  padding: 20px 34px 40px;
   display: flex;
   flex-direction: column;
 }
@@ -326,7 +305,7 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 26px;
+  margin-bottom: 14px;
 }
 .canvas__hint {
   margin: 7px 0 0;
@@ -370,22 +349,22 @@ body {
 
 /* Daily digest — the gist of the active day */
 .digest {
-  margin: 0 0 26px;
-  font-size: 15px;
+  margin: 0 0 12px;
+  font-size: 13.5px;
   color: var(--ink-muted);
   letter-spacing: -0.01em;
 }
 
 /* Chart blocks (precip strip + temp band share the same column grid) */
 .chartblock {
-  margin-bottom: 18px;
+  margin-bottom: 8px;
 }
 .chartblock__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 7px;
   flex-wrap: wrap;
 }
 .chartblock__label {
@@ -431,7 +410,7 @@ body {
   position: relative;
   width: 26px;
   flex: none;
-  height: 150px;
+  height: 100px;
 }
 .strip__axis span {
   position: absolute;
@@ -446,7 +425,7 @@ body {
   display: flex;
   gap: 4px;
   align-items: flex-end;
-  height: 150px;
+  height: 100px;
   flex: 1;
   min-width: 0;
 }
@@ -523,11 +502,11 @@ body {
 }
 /* Temperature band — continuous p10–p90 area + median line (SVG), aligned to precip */
 .chartblock--temp .strip__axis {
-  height: 56px;
+  height: 38px;
 }
 #tempRow {
   position: relative;
-  height: 56px;
+  height: 38px;
   flex: 1;
   min-width: 0;
 }
@@ -602,44 +581,42 @@ body {
   color: #fff;
 }
 
-/* Selected-hour detail */
-/* ===== Board — the bettable scenario hero (the protagonist) ===== */
+/* ===== Board — the scenario hero (compact) ===== */
 .board {
-  margin: 4px 0 8px;
+  margin: 0 0 4px;
 }
 .board__head {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
 }
 .board__when {
   margin: 0;
-  font-size: 26px;
+  font-size: 19px;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 .board__sub {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--ink-subtle);
 }
 .board__scenarios {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 3px;
 }
-/* each scenario is a big tappable row — this is where the "볼맛" lives */
 .scenario {
   display: grid;
-  grid-template-columns: 78px 1fr 56px;
+  grid-template-columns: 66px 1fr 46px;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
   background: none;
   border: none;
-  padding: 11px 12px;
-  border-radius: 10px;
+  padding: 6px 10px;
+  border-radius: 7px;
   cursor: pointer;
   text-align: left;
   font-family: var(--sans);
@@ -649,7 +626,7 @@ body {
   background: #f4f6f9;
 }
 .scenario__label {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--ink-muted);
 }
@@ -658,32 +635,31 @@ body {
   font-weight: 700;
 }
 .scenario__track {
-  height: 16px;
+  height: 10px;
   background: var(--hairline);
-  border-radius: 8px;
+  border-radius: 5px;
   overflow: hidden;
 }
 .scenario__fill {
   display: block;
   height: 100%;
-  border-radius: 8px;
+  border-radius: 5px;
   min-width: 3px;
   transform-origin: left;
-  animation: growx 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: growx 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .scenario__pct {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   text-align: right;
   color: var(--ink-muted);
 }
 .scenario.is-lead .scenario__pct {
-  font-size: 20px;
+  font-size: 16px;
   color: var(--ink);
 }
-/* tapped scenario — an ephemeral highlight (focus), no persistence */
 .scenario.is-picked {
   background: var(--brand-soft);
   box-shadow: inset 0 0 0 1.5px var(--brand);
@@ -693,41 +669,41 @@ body {
 }
 .board__cond {
   display: flex;
-  gap: 40px;
-  margin-top: 24px;
-  padding-top: 20px;
+  gap: 32px;
+  margin-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid var(--hairline);
   flex-wrap: wrap;
 }
 .board__cond .windblock {
-  min-width: 150px;
+  min-width: 140px;
 }
 
 .ro {
-  padding-top: 4px;
+  padding-top: 0;
 }
 .ro__label {
   font-size: 12px;
   color: var(--ink-subtle);
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 .ro__val {
   font-family: var(--mono);
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--ink);
   letter-spacing: -0.02em;
   line-height: 1;
 }
 .ro__sub {
-  margin-top: 5px;
+  margin-top: 4px;
   font-size: 12px;
   color: var(--ink-subtle);
 }
 /* wind readout keeps a little range graph (p10–p90 band + median tick) */
 .wind__val {
   font-family: var(--mono);
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--ink);
   letter-spacing: -0.02em;
@@ -768,12 +744,12 @@ body {
 
 /* Method footer */
 .method {
-  margin-top: 44px;
-  padding-top: 22px;
+  margin-top: 24px;
+  padding-top: 14px;
   border-top: 1px solid var(--hairline);
 }
 .method__src {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   max-width: 74ch;
   color: var(--ink-subtle);
   font-size: 13px;
