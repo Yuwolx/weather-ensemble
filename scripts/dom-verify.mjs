@@ -48,19 +48,12 @@ check('column segment heights sum to ~100%', [...cols].every((c) => {
   const sum = [...c.querySelectorAll('.col__seg')].reduce((s, seg) => s + parseFloat(seg.style.height), 0);
   return Math.abs(sum - 100) < 0.6;
 }));
-check('no single-% hero number (removed)', !d.getElementById('vNow'));
-check('hero meta shows temp + wind', /기온.*바람/.test(txt('#vNowMeta') || ''), txt('#vNowMeta'));
-check('hero read line is populated', (txt('#vLine') || '').length > 5, txt('#vLine'));
-check('member-count line removed from rail', !d.getElementById('vTrust'));
-check('daily digest populated', (txt('#digest') || '').length > 5, txt('#digest'));
 check('region label set', (txt('#vRegion') || '').includes('수원'), txt('#vRegion'));
-check('temp band is an svg area + median line',
-  !!d.querySelector('#tempRow svg.tempsvg polygon.tempsvg__band') && !!d.querySelector('#tempRow svg.tempsvg polyline.tempsvg__line'));
-check('temp axis shows a high/low label', d.querySelectorAll('#tempAxis span').length === 2);
-check('board has temp + rain readouts', d.querySelectorAll('#board .ro').length >= 2,
-  `${d.querySelectorAll('#board .ro').length} readouts`);
-check('board wind graph present', !!d.querySelector('#board .wind__range .wind__median'));
-check('board wind shows m/s', /m\/s/.test(d.querySelector('#board .windblock')?.textContent || ''));
+check('clutter removed (no sentence/digest/temp/legend)',
+  !d.getElementById('vLine') && !d.getElementById('digest') && !d.getElementById('tempRow') && !d.getElementById('legend'));
+check('board conditions is one compact line (temp·강수·바람)',
+  /기온.*강수.*바람/.test(d.querySelector('#board .board__cond')?.textContent || ''),
+  d.querySelector('#board .board__cond')?.textContent);
 check('time axis labels every other hour with ticks', d.querySelectorAll('#stripTimes .tick--on').length >= 2,
   `${d.querySelectorAll('#stripTimes .tick--on').length} labeled`);
 check('day tabs rendered', d.querySelectorAll('#dayTabs .daytab').length >= 1, `${d.querySelectorAll('#dayTabs .daytab').length} tabs`);
@@ -70,7 +63,6 @@ check('each scenario shows a %', [...d.querySelectorAll('#board .scenario .scena
 check('exactly one leading scenario highlighted', d.querySelectorAll('#board .scenario.is-lead').length === 1);
 check('exactly one column marked "지금" on today', d.querySelectorAll('#stripCols .col--now').length === 1);
 check('one column is selected (aria-pressed)', d.querySelectorAll('#stripCols .col[aria-pressed="true"]').length === 1);
-check('legend has 4 entries', d.querySelectorAll('#legend li').length === 4);
 check('favorites rendered 2 chips', d.querySelectorAll('#favs .chip').length === 2);
 check('overlay hidden after load', d.getElementById('overlay').hidden === true);
 

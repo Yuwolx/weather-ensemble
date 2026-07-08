@@ -208,32 +208,19 @@ export function renderBoard(container, { analyzedHour, todayDate, picked, onPick
   const t = a.temp;
   const amt = a.amount;
   const w = a.wind;
-  const wmax = Math.max(12, w.p90 ?? 0);
-  const bandL = ((w.p10 ?? 0) / wmax) * 100;
-  const bandW = (((w.p90 ?? 0) - (w.p10 ?? 0)) / wmax) * 100;
-  const medL = ((w.median ?? 0) / wmax) * 100;
+  const tempTxt = t.p10 != null ? `${deg(t.median)} (${deg(t.p10)}–${deg(t.p90)})` : deg(t.median);
+  const rainTxt = amt.p50 > 0 ? mm(amt.p50) : amt.p90 > 0 ? `0mm (많으면 ${mm(amt.p90)})` : '0mm';
 
   container.replaceChildren(
     el('div', { class: 'board__head' }, [
       el('h2', { class: 'board__when', text: `${dayLabel(a.time, todayDate)} ${hourLabel(a.time)}` }),
-      el('span', { class: 'board__sub', text: `${a.dist.n}개 예보가 이렇게 갈립니다` }),
+      el('span', { class: 'board__sub', text: `${a.dist.n}개 예보` }),
     ]),
     el('div', { class: 'board__scenarios' }, rows),
-    el('div', { class: 'board__cond' }, [
-      readout('기온', deg(t.median), t.p10 != null ? `${deg(t.p10)}–${deg(t.p90)}` : null),
-      readout('예상 강수량', amt.p50 > 0 ? mm(amt.p50) : '0mm', amt.p90 > 0 ? `많으면 ${mm(amt.p90)}` : '대부분 0mm'),
-      el('div', { class: 'windblock' }, [
-        el('div', { class: 'ro__label', text: '바람' }),
-        el('div', {}, [
-          el('span', { class: 'wind__val num', text: ms(w.median) }),
-          el('span', { class: 'wind__unit', text: 'm/s' }),
-        ]),
-        el('div', { class: 'wind__range' }, [
-          el('div', { class: 'wind__band', style: `left:${bandL}%;width:${Math.max(bandW, 1)}%` }),
-          el('div', { class: 'wind__median', style: `left:calc(${medL}% - 1px)` }),
-        ]),
-      ]),
-    ]),
+    el('p', {
+      class: 'board__cond',
+      text: `기온 ${tempTxt}  ·  강수 ${rainTxt}  ·  바람 ${ms(w.median)} m/s`,
+    }),
   );
 }
 

@@ -69,68 +69,31 @@
             <span>현재 위치</span>
           </button>
         </section>
-
-        <!-- plain read + current conditions (no single headline number) -->
-        <section class="now" aria-live="polite">
-          <div class="live">
-            <span class="live__dot" aria-hidden="true"></span>
-            <span id="vUpdated">LIVE</span>
-          </div>
-          <p class="now__line" id="vLine">앙상블 예보를 불러오는 중…</p>
-          <p class="now__meta" id="vNowMeta"></p>
-        </section>
       </aside>
 
       <!-- ===== Instrument canvas ===== -->
       <main class="canvas">
         <div class="canvas__head">
-          <div class="canvas__title">
-            <p class="eyebrow">경우의 수</p>
-            <p class="canvas__hint">모델마다 다르게 봅니다. 어느 확률을 믿을지는 당신이.</p>
-          </div>
+          <p class="eyebrow">경우의 수</p>
           <div class="daytabs" id="dayTabs" role="tablist" aria-label="날짜"></div>
         </div>
 
-        <p class="digest" id="digest"></p>
-
-        <!-- Hero: the selected hour's scenario spread — bettable -->
+        <!-- Hero: the selected hour's scenario spread -->
         <section class="board" id="board" aria-label="선택 시각 시나리오"></section>
 
-        <!-- Timeline scrubber: pick a different hour -->
+        <!-- Timeline: pick a different hour -->
         <section class="strip" aria-label="시간별 분포">
-          <div class="chartblock">
-            <div class="chartblock__head">
-              <span class="chartblock__label">시간별 강수 분포 — 다른 시각을 눌러보세요</span>
-              <ul class="legend" id="legend"></ul>
-            </div>
-            <div class="stripwrap">
-              <div class="strip__axis" id="stripAxisY" aria-hidden="true"></div>
-              <div class="strip__cols" id="stripCols" role="group" aria-label="시간별 막대. 화살표 키로 시각을 이동합니다."></div>
-            </div>
+          <p class="strip__label">시간별 — 눌러서 다른 시각 보기</p>
+          <div class="stripwrap">
+            <div class="strip__axis" id="stripAxisY" aria-hidden="true"></div>
+            <div class="strip__cols" id="stripCols" role="group" aria-label="시간별 막대. 화살표 키로 시각을 이동합니다."></div>
           </div>
-
-          <div class="chartblock chartblock--temp">
-            <div class="chartblock__head">
-              <span class="chartblock__label">기온 범위 <span class="chartblock__unit">°C</span></span>
-            </div>
-            <div class="stripwrap">
-              <div class="strip__axis" id="tempAxis" aria-hidden="true"></div>
-              <div class="temprow" id="tempRow" aria-hidden="true"></div>
-            </div>
-          </div>
-
           <div class="strip__times" id="stripTimes" aria-hidden="true"></div>
         </section>
 
         <footer class="method">
-          <p class="method__src" id="methodText">
-            <b>출처</b> — ECMWF·NOAA(GFS)·독일 ICON·캐나다·호주 5개 기관의 앙상블 멤버를
-            Open-Meteo로 받아, 각 시각의 예보값을 강수 구간별로 세어 확률로 환산합니다.
-            저희가 다시 예측하지 않습니다. 막대가 여러 색으로 쪼개질수록 모델 의견이 갈린다는 뜻입니다.
-          </p>
-          <button class="linkbtn" id="tableToggle" type="button" aria-expanded="false">
-            숫자를 표로 보기
-          </button>
+          <p class="method__src">여러 기관의 앙상블 예보를 그대로 세어 확률로 보여줍니다. 저희가 다시 예측하지 않습니다.</p>
+          <button class="linkbtn" id="tableToggle" type="button" aria-expanded="false">숫자를 표로 보기</button>
           <div class="tablewrap" id="tableWrap" hidden></div>
         </footer>
       </main>

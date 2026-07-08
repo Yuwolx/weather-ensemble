@@ -420,9 +420,18 @@ body {
   display: flex;
   gap: 10px;
 }
-/* clearance so the "지금" marker above the current column clears the legend */
-.chartblock:not(.chartblock--temp) .stripwrap {
-  padding-top: 18px;
+.strip {
+  margin-top: 22px;
+}
+/* clearance so the "지금" marker above the current column clears the label above */
+.strip .stripwrap {
+  padding-top: 16px;
+}
+.strip__label {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-subtle);
 }
 .strip__axis {
   position: relative;
@@ -686,15 +695,13 @@ body {
   background: var(--brand-soft);
 }
 .board__cond {
-  display: flex;
-  gap: 32px;
-  margin-top: 14px;
+  margin: 14px 0 0;
   padding-top: 12px;
   border-top: 1px solid var(--hairline);
-  flex-wrap: wrap;
-}
-.board__cond .windblock {
-  min-width: 140px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  color: var(--ink-subtle);
 }
 
 .ro {

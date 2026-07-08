@@ -5,10 +5,8 @@ import { REGIONS } from './regions.js';
 import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM } from './config.js';
 import { loadEnsemble, getCurrentPosition, nearestRegion } from './api.js';
 import { analyzeHour } from './stats.js';
-import { verdict, pct, mm, ms, deg, dateOf, hourOf } from './format.js';
+import { pct, mm, ms, deg, dateOf, hourOf } from './format.js';
 import * as ui from './ui.js';
-
-const SUMMARY_HOURS = 24; // the rail summary (지금 + 최대) reasons over the next 24h
 
 const state = {
   region: null,
@@ -27,14 +25,10 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const refs = {
   overlay: $('overlay'), overlayMsg: $('overlayMsg'), spinner: $('spinner'), retry: $('retryBtn'),
-  hero: { region: $('vRegion'), updated: $('vUpdated'), meta: $('vNowMeta'), line: $('vLine') },
+  region: $('vRegion'),
   board: $('board'),
   strip: { axis: $('stripAxisY'), cols: $('stripCols'), times: $('stripTimes') },
-  temp: { axis: $('tempAxis'), row: $('tempRow') },
-  digest: $('digest'),
   dayTabs: $('dayTabs'),
-  detail: $('detail'),
-  legend: $('legend'),
   favs: $('favs'),
   search: $('searchInput'),
   suggest: $('suggest'),
@@ -98,7 +92,7 @@ async function selectRegion(region) {
     state.meta = { memberCount: data.memberCount, modelCount: data.modelCount };
     setActiveDay(state.days[0], false);
 
-    renderHero();
+    renderRegion();
     renderCanvas();
     hideOverlay();
   } catch (err) {
@@ -115,49 +109,9 @@ function setActiveDay(date, rerender = true) {
 }
 
 // ---- render ----------------------------------------------------------------
-function renderHero() {
-  const next24 = state.all.slice(0, SUMMARY_HOURS);
-  const now = state.all[0];
-  const v = verdict(next24);
-
-  ui.renderHero(refs.hero, {
-    region: `${state.region.sido ? state.region.sido + ' ' : ''}${state.region.name}`,
-    updated: `LIVE · ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`,
-    tone: v.tone,
-    meta: `지금 기온 ${deg(now.temp.median)} · 바람 ${ms(now.wind.median)} m/s`,
-    line: v.line,
-  });
+function renderRegion() {
+  refs.region.textContent = `${state.region.sido ? state.region.sido + ' ' : ''}${state.region.name}`;
 }
-
-// The gist of the active day in one line, so the strip is optional not mandatory.
-function dayDigest(hours, date) {
-  const label = dayLabelFor(date);
-  const rainy = hours.filter((a) => a.rain.probability >= 0.5);
-  const peak = hours[peakIndex(hours)];
-  let rain;
-  if (!rainy.length) {
-    rain = peak.rain.probability >= 0.3 ? `한때 비 (최대 ${pct(peak.rain.probability)})` : '비 소식 거의 없음';
-  } else {
-    const h0 = hourOf(rainy[0].time);
-    const h1 = hourOf(rainy[rainy.length - 1].time);
-    rain = h0 === h1 ? `${h0}시 비` : `${h0}–${h1}시 비`;
-    rain += ` · 최대 ${pct(peak.rain.probability)}`;
-  }
-  const meds = hours.map((a) => a.temp.median).filter((v) => v != null);
-  const temp = meds.length ? `기온 ${deg(Math.min(...meds))}–${deg(Math.max(...meds))}` : '';
-  const maxAmt = Math.max(0, ...hours.map((a) => a.amount.p90 ?? 0));
-  const amt = maxAmt >= 0.1 ? `예상 강수 최대 ${mm(maxAmt)}` : '';
-  return [`${label} · ${rain}`, temp, amt].filter(Boolean).join('  ·  ');
-}
-
-const dayLabelFor = (date) => {
-  if (date === state.todayDate) return '오늘';
-  const next = new Date(`${state.todayDate}T00:00`);
-  next.setDate(next.getDate() + 1);
-  const p = (n) => String(n).padStart(2, '0');
-  const nd = `${next.getFullYear()}-${p(next.getMonth() + 1)}-${p(next.getDate())}`;
-  return date === nd ? '내일' : `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
-};
 
 function renderCanvas() {
   ui.renderDayTabs(refs.dayTabs, {
@@ -166,7 +120,6 @@ function renderCanvas() {
     todayDate: state.todayDate,
     onSelect: (d) => setActiveDay(d),
   });
-  ui.renderDigest(refs.digest, dayDigest(state.hours, state.activeDay));
   ui.renderStrip(refs.strip, {
     analyzed: state.hours,
     todayDate: state.todayDate,
@@ -178,7 +131,6 @@ function renderCanvas() {
       else ui.showTooltip(state.hours[i], anchor, state.todayDate);
     },
   });
-  ui.renderTempArea(refs.temp, { hours: state.hours });
   renderBoard();
   if (refs.tableToggle.getAttribute('aria-expanded') === 'true') {
     ui.renderTable(refs.tableWrap, { analyzed: state.hours, todayDate: state.todayDate });
@@ -313,6 +265,5 @@ refs.tableToggle.addEventListener('click', () => {
 });
 
 // ---- boot ------------------------------------------------------------------
-ui.renderLegend(refs.legend);
 ui.renderFavorites(refs.favs, FAVORITES, null, selectRegion);
 selectRegion(FAVORITES[0]); // 수원시 권선구
