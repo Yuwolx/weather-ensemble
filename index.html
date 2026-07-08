@@ -2,12 +2,20 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>기상 합의 · 앙상블 날씨</title>
     <meta
       name="description"
       content="여러 예보 모델을 그대로 모아 날씨를 하나의 숫자가 아닌 확률 분포로 보여주는 앙상블 날씨 계기판"
     />
+    <!-- PWA: installable to the phone home screen, opens fullscreen like an app -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="기상합의" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -137,5 +145,13 @@
     </div>
 
     <script type="module" src="js/main.js"></script>
+    <script>
+      // register the service worker (installability + offline); harmless if unsupported
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

@@ -1,0 +1,17 @@
+{
+  "name": "기상 합의 · 앙상블 날씨",
+  "short_name": "기상합의",
+  "description": "여러 예보 모델을 모아 날씨를 하나의 숫자가 아닌 확률 분포로 보여주는 앙상블 날씨",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
