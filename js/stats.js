@@ -52,17 +52,25 @@ export function quantile(members, q) {
   return vals[lo] + (vals[hi] - vals[lo]) * (idx - lo);
 }
 
-// Wind is reported as a spread, not a bucket: the median plus a p10–p90 band tells
-// you both the likely value and how confident the models are about it.
-export function windStats(members) {
+// A continuous quantity (wind, temperature) reported as a spread: the median plus
+// a p10–p90 band tells you both the likely value and how much the models disagree.
+export function spread(members) {
   const vals = clean(members);
   return {
     n: vals.length,
     median: quantile(vals, 0.5),
     p10: quantile(vals, 0.1),
     p90: quantile(vals, 0.9),
+    min: vals.length ? Math.min(...vals) : null,
     max: vals.length ? Math.max(...vals) : null,
   };
+}
+export const windStats = spread; // kept for readability at call sites
+
+// How much rain, not just whether: the typical (p50) and heavy-case (p90) hourly
+// amount across all members. p50 near 0 with a high p90 = "probably light, could pour".
+export function precipAmount(members) {
+  return { p50: quantile(members, 0.5), p90: quantile(members, 0.9) };
 }
 
 // Compose the per-hour picture: distribution + headline rain prob + wind + consensus.
@@ -73,7 +81,9 @@ export function analyzeHour(hour, buckets, rainThreshold) {
     time: hour.time,
     dist,
     rain: rainProbability(hour.precipMembers, rainThreshold),
-    wind: windStats(hour.windMembers),
+    amount: precipAmount(hour.precipMembers),
+    wind: spread(hour.windMembers),
+    temp: spread(hour.tempMembers || []),
     agree: agreement(dist),
   };
 }

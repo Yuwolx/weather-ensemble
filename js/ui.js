@@ -3,7 +3,7 @@
 // UI easy to reason about: same inputs → same markup.
 
 import { PRECIP_BUCKETS } from './config.js';
-import { pct, mm, ms, hourOf, hourLabel, dayLabel, dateOf } from './format.js';
+import { pct, mm, ms, deg, hourOf, hourLabel, dayLabel, dateOf } from './format.js';
 
 const SEG_ORDER = ['dry', 'light', 'mod', 'heavy']; // top → bottom in the column
 const bucketOf = (key) => PRECIP_BUCKETS.find((b) => b.key === key);
@@ -52,22 +52,21 @@ export function renderLegend(container) {
 
 const TONE_VAR = { dry: 'var(--tone-dry)', maybe: 'var(--tone-maybe)', wet: 'var(--tone-wet)' };
 
-// The live "right now" readout in the rail: current rain %, the plain-language
-// read, and a compact stat list. The verdict tone drives the accent color.
-export function renderHero(refs, { region, updated, nowPctNum, tone, line, stats }) {
+// The live "right now" readout in the rail: current rain %, current temp/wind,
+// the plain-language read, and a small trust line. Verdict tone drives the accent.
+export function renderHero(refs, { region, updated, nowPctNum, tone, meta, line, trust }) {
   document.documentElement.style.setProperty('--tone', TONE_VAR[tone]);
   refs.region.textContent = region;
   refs.updated.textContent = updated;
   refs.now.textContent = nowPctNum;
+  refs.meta.textContent = meta;
   refs.line.textContent = line;
-  refs.stats.replaceChildren(
-    ...stats.map((s) =>
-      el('div', { class: 'stat' }, [
-        el('div', { class: 'stat__label', text: s.label }),
-        el('div', { class: `stat__val${s.accent ? ' stat__val--accent' : ''}`, text: s.val }),
-      ]),
-    ),
-  );
+  refs.trust.textContent = trust;
+}
+
+// One-line digest for the active day — the gist without reading the strip.
+export function renderDigest(node, text) {
+  node.textContent = text;
 }
 
 // Day tabs (오늘 / 내일) — the segmented control that makes the canvas operable.
@@ -137,6 +136,55 @@ export function renderStrip(refs, { analyzed, todayDate, nowTime, selectedIndex,
   );
 }
 
+// Temperature band synced to the precip strip: one vertical bar per hour spanning
+// p10–p90 with a median tick, scaled to the day's range. Bar length = model spread.
+export function renderTempRow(refs, { hours, selectedIndex }) {
+  const p10s = hours.map((h) => h.temp.p10).filter((v) => v != null);
+  const p90s = hours.map((h) => h.temp.p90).filter((v) => v != null);
+  if (!p10s.length) {
+    refs.axis.replaceChildren();
+    refs.row.replaceChildren();
+    return;
+  }
+  const pad = 1.5;
+  const lo = Math.min(...p10s) - pad;
+  const hi = Math.max(...p90s) + pad;
+  const span = hi - lo || 1;
+  const map = (v) => ((v - lo) / span) * 100;
+
+  refs.axis.replaceChildren(
+    el('span', { style: 'top:6%', text: `${Math.round(hi)}°` }),
+    el('span', { style: 'top:94%', text: `${Math.round(lo)}°` }),
+  );
+
+  refs.row.replaceChildren(
+    ...hours.map((a, i) => {
+      const t = a.temp;
+      const col = el('div', { class: `temp-col${i === selectedIndex ? ' is-sel' : ''}`, 'data-i': String(i) });
+      if (t.p10 != null && t.p90 != null) {
+        col.appendChild(
+          el('div', {
+            class: 'temp-col__bar',
+            style: `bottom:${map(t.p10)}%;height:${Math.max(map(t.p90) - map(t.p10), 2)}%`,
+          }),
+        );
+        if (t.median != null) {
+          col.appendChild(el('div', { class: 'temp-col__med', style: `bottom:${map(t.median)}%` }));
+        }
+      }
+      return col;
+    }),
+  );
+}
+
+function readout(label, value, sub) {
+  return el('div', { class: 'ro' }, [
+    el('div', { class: 'ro__label', text: label }),
+    el('div', { class: 'ro__val num', text: value }),
+    sub ? el('div', { class: 'ro__sub', text: sub }) : null,
+  ]);
+}
+
 export function renderDetail(container, { analyzedHour, memberCount, modelCount, todayDate }) {
   const a = analyzedHour;
   const scenarios = PRECIP_BUCKETS.map((b) => {
@@ -155,11 +203,10 @@ export function renderDetail(container, { analyzedHour, memberCount, modelCount,
 
   const wet = a.rain.wet ?? Math.round(a.rain.probability * a.dist.n);
   const w = a.wind;
-  // wind range bar scaled 0..max(12, p90)
-  const wmax = Math.max(12, w.p90 ?? 0);
-  const bandL = ((w.p10 ?? 0) / wmax) * 100;
-  const bandW = (((w.p90 ?? 0) - (w.p10 ?? 0)) / wmax) * 100;
-  const medL = ((w.median ?? 0) / wmax) * 100;
+  const t = a.temp;
+  const amt = a.amount;
+  const amountSub =
+    amt.p50 > 0 ? `많으면 ${mm(amt.p90)}` : amt.p90 > 0 ? `많으면 ${mm(amt.p90)}` : '멤버 대부분 0mm';
 
   container.replaceChildren(
     el('div', { class: 'detail__grid' }, [
@@ -173,24 +220,17 @@ export function renderDetail(container, { analyzedHour, memberCount, modelCount,
         ...scenarios,
       ]),
       el('div', { class: 'detail__side' }, [
-        el('div', { class: 'wind__label', text: '바람 (중앙값)' }),
-        el('div', {}, [
-          el('span', { class: 'wind__val num', text: ms(w.median) }),
-          el('span', { class: 'wind__unit', text: 'm/s' }),
-        ]),
-        el('div', { class: 'wind__range' }, [
-          el('div', { class: 'wind__band', style: `left:${bandL}%;width:${Math.max(bandW, 1)}%` }),
-          el('div', { class: 'wind__median', style: `left:calc(${medL}% - 1px)` }),
-        ]),
-        el('div', {
-          class: 'wind__spread',
-          text: `대부분 ${ms(w.p10)}–${ms(w.p90)} m/s · 최대 ${ms(w.max)}`,
+        readout('기온', deg(t.median), t.p10 != null ? `범위 ${deg(t.p10)}–${deg(t.p90)}` : null),
+        readout(
+          '예상 강수량',
+          amt.p50 > 0 ? mm(amt.p50) : '0mm',
+          amountSub,
+        ),
+        readout('바람', `${ms(w.median)} m/s`, w.p10 != null ? `${ms(w.p10)}–${ms(w.p90)} · 최대 ${ms(w.max)}` : null),
+        el('p', {
+          class: 'detail__note',
+          text: `${memberCount}개 멤버 · ${modelCount}개 기관 앙상블`,
         }),
-        el('div', { class: 'wind__label', style: 'margin-top:22px', text: '표본' }),
-        el('div', {}, [
-          el('span', { class: 'wind__val num', style: 'font-size:22px', text: String(memberCount) }),
-          el('span', { class: 'wind__unit', text: `멤버 · ${modelCount}개 기관` }),
-        ]),
       ]),
     ]),
   );

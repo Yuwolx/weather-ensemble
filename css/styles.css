@@ -21,15 +21,18 @@
   --brand: #5e6ad2;
   --brand-soft: rgba(94, 106, 210, 0.09);
 
-  --p-dry: #cfd6de;
-  --p-light: #8fbfe8;
-  --p-mod: #3987e5;
-  --p-heavy: #23499b;
+  --p-dry: #dce0e5;
+  --p-light: #6fa8e0;
+  --p-mod: #2f7fe0;
+  --p-heavy: #143a86;
 
   --tone-dry: #199e70;
   --tone-maybe: #b8791a;
-  --tone-wet: #3170cf;
+  --tone-wet: #2f7fe0;
   --wind: #199e70;
+
+  --temp-warm: #e07b39; /* temperature band — warm, distinct from precip blue */
+  --temp-band: rgba(224, 123, 57, 0.22);
 
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -296,43 +299,28 @@ body {
   font-size: 12.5px;
   color: var(--ink-subtle);
 }
+.now__meta {
+  margin: 12px 0 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-muted);
+}
 .now__line {
-  margin: 16px 0 0;
+  margin: 14px 0 0;
   font-size: 14.5px;
   line-height: 1.5;
   color: var(--ink-muted);
   text-wrap: pretty;
 }
 
-/* compact stats list */
-.rail__stats {
-  display: flex;
-  flex-direction: column;
-  margin-top: auto;
-}
-.stat {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 11px 0;
+/* trust line pinned to the bottom of the rail */
+.trust {
+  margin: auto 0 0;
+  padding-top: 18px;
   border-top: 1px solid var(--hairline);
-}
-.stat__val {
   font-family: var(--mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--ink);
-  white-space: nowrap;
-}
-.stat__val--accent {
-  color: var(--tone, var(--tone-wet));
-}
-.stat__label {
-  font-size: 12.5px;
-  color: var(--ink-subtle);
-  line-height: 1.35;
+  font-size: 11.5px;
+  color: var(--ink-faint);
 }
 
 /* ---------------------------------------------------- Instrument canvas */
@@ -390,12 +378,43 @@ body {
   border-radius: 2px;
 }
 
+/* Daily digest — the gist of the active day */
+.digest {
+  margin: 0 0 26px;
+  font-size: 15px;
+  color: var(--ink-muted);
+  letter-spacing: -0.01em;
+}
+
+/* Chart blocks (precip strip + temp band share the same column grid) */
+.chartblock {
+  margin-bottom: 18px;
+}
+.chartblock__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.chartblock__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  letter-spacing: 0.02em;
+}
+.chartblock__unit {
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+
 /* Legend */
 .legend {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   list-style: none;
-  margin: 0 0 16px;
+  margin: 0;
   padding: 0;
   flex-wrap: wrap;
 }
@@ -422,7 +441,7 @@ body {
   position: relative;
   width: 26px;
   flex: none;
-  height: 260px;
+  height: 216px;
 }
 .strip__axis span {
   position: absolute;
@@ -437,7 +456,7 @@ body {
   display: flex;
   gap: 4px;
   align-items: flex-end;
-  height: 260px;
+  height: 216px;
   flex: 1;
   min-width: 0;
 }
@@ -512,6 +531,48 @@ body {
   color: var(--brand);
   white-space: nowrap;
 }
+/* Temperature band row — vertical p10–p90 bars + median tick, aligned to precip */
+.temprow {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  height: 78px;
+  flex: 1;
+  min-width: 0;
+}
+.temp-col {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+}
+.temp-col__bar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 62%;
+  min-width: 3px;
+  background: var(--temp-band);
+  border-radius: 3px;
+}
+.temp-col__med {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 62%;
+  min-width: 3px;
+  height: 2px;
+  background: var(--temp-warm);
+  border-radius: 1px;
+}
+.temp-col.is-sel .temp-col__bar {
+  background: rgba(224, 123, 57, 0.34);
+}
+.temp-col.is-sel .temp-col__med {
+  box-shadow: 0 0 0 2px rgba(224, 123, 57, 0.25);
+}
+
 .strip__times {
   display: flex;
   gap: 4px;
@@ -634,50 +695,35 @@ body {
 }
 .detail__side {
   padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
-.wind__label {
+.ro__label {
   font-size: 12px;
   color: var(--ink-subtle);
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
-.wind__val {
+.ro__val {
   font-family: var(--mono);
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 600;
   color: var(--ink);
   letter-spacing: -0.02em;
+  line-height: 1;
 }
-.wind__unit {
-  font-size: 13px;
-  color: var(--ink-subtle);
-  margin-left: 4px;
-}
-.wind__range {
-  margin-top: 14px;
-  height: 6px;
-  background: var(--hairline);
-  border-radius: 3px;
-  position: relative;
-}
-.wind__band {
-  position: absolute;
-  height: 100%;
-  background: var(--wind);
-  border-radius: 3px;
-  opacity: 0.4;
-}
-.wind__median {
-  position: absolute;
-  top: -3px;
-  width: 2px;
-  height: 12px;
-  background: var(--wind);
-  border-radius: 1px;
-}
-.wind__spread {
-  margin-top: 8px;
+.ro__sub {
+  margin-top: 5px;
   font-size: 12px;
   color: var(--ink-subtle);
+}
+.detail__note {
+  margin: 4px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-faint);
 }
 
 /* Method footer */

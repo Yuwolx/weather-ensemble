@@ -9,7 +9,7 @@ export function buildEnsembleUrl(lat, lon) {
   const p = new URLSearchParams({
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
-    hourly: 'precipitation,wind_speed_10m',
+    hourly: 'precipitation,wind_speed_10m,temperature_2m',
     models: MODELS.join(','),
     wind_speed_unit: 'ms',
     timezone: 'auto',
@@ -42,6 +42,7 @@ export function parseEnsemble(json) {
   const keys = Object.keys(hourly);
   const precipKeys = keys.filter((k) => k.startsWith('precipitation'));
   const windKeys = keys.filter((k) => k.startsWith('wind_speed_10m'));
+  const tempKeys = keys.filter((k) => k.startsWith('temperature_2m'));
 
   const models = new Set(precipKeys.map((k) => modelIdOf(k, 'precipitation')));
 
@@ -49,6 +50,7 @@ export function parseEnsemble(json) {
     time, // local ISO string, e.g. "2026-07-08T15:00"
     precipMembers: precipKeys.map((k) => hourly[k][i]),
     windMembers: windKeys.map((k) => hourly[k][i]),
+    tempMembers: tempKeys.map((k) => hourly[k][i]),
   }));
 
   return {

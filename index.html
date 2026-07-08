@@ -72,10 +72,11 @@
             <span class="num" id="vNow">—</span><span class="now__unit">%</span>
           </div>
           <p class="now__cap">지금 비 올 확률 · 멤버 합의</p>
+          <p class="now__meta" id="vNowMeta"></p>
           <p class="now__line" id="vLine">앙상블 예보를 불러오는 중…</p>
         </section>
 
-        <div class="rail__stats" id="vStats"></div>
+        <p class="trust" id="vTrust"></p>
       </aside>
 
       <!-- ===== Instrument canvas ===== -->
@@ -88,12 +89,30 @@
           <div class="daytabs" id="dayTabs" role="tablist" aria-label="날짜"></div>
         </div>
 
+        <p class="digest" id="digest"></p>
+
         <section class="strip" aria-label="시간별 앙상블 분포">
-          <ul class="legend" id="legend"></ul>
-          <div class="stripwrap">
-            <div class="strip__axis" id="stripAxisY" aria-hidden="true"></div>
-            <div class="strip__cols" id="stripCols" role="group" aria-label="시간별 막대. 화살표 키로 시각을 이동합니다."></div>
+          <div class="chartblock">
+            <div class="chartblock__head">
+              <span class="chartblock__label">강수 확률 분포</span>
+              <ul class="legend" id="legend"></ul>
+            </div>
+            <div class="stripwrap">
+              <div class="strip__axis" id="stripAxisY" aria-hidden="true"></div>
+              <div class="strip__cols" id="stripCols" role="group" aria-label="시간별 막대. 화살표 키로 시각을 이동합니다."></div>
+            </div>
           </div>
+
+          <div class="chartblock chartblock--temp">
+            <div class="chartblock__head">
+              <span class="chartblock__label">기온 범위 <span class="chartblock__unit">°C</span></span>
+            </div>
+            <div class="stripwrap">
+              <div class="strip__axis" id="tempAxis" aria-hidden="true"></div>
+              <div class="temprow" id="tempRow" aria-hidden="true"></div>
+            </div>
+          </div>
+
           <div class="strip__times" id="stripTimes" aria-hidden="true"></div>
         </section>
 

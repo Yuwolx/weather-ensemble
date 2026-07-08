@@ -5,6 +5,8 @@ import {
   precipDistribution,
   rainProbability,
   windStats,
+  spread,
+  precipAmount,
   agreement,
 } from '../js/stats.js';
 import { PRECIP_BUCKETS, RAIN_THRESHOLD_MM } from '../js/config.js';
@@ -71,6 +73,29 @@ test('windStats reports median and a p10-p90 spread', () => {
   assert.ok(w.p10 >= 1 && w.p10 <= w.median);
   assert.ok(w.p90 <= 10 && w.p90 >= w.median);
   assert.equal(w.max, 10);
+});
+
+test('spread reports median, p10-p90 band, and min/max', () => {
+  const s = spread([10, 12, 14, 16, 18, 20, 22, 24, 26, 28]);
+  assert.equal(s.n, 10);
+  assert.ok(Math.abs(s.median - 19) < 1e-9);
+  assert.equal(s.min, 10);
+  assert.equal(s.max, 28);
+  assert.ok(s.p10 < s.median && s.p90 > s.median);
+});
+
+test('spread on empty input is null-valued, not a crash', () => {
+  const s = spread([null, NaN]);
+  assert.equal(s.n, 0);
+  assert.equal(s.median, null);
+  assert.equal(s.min, null);
+});
+
+test('precipAmount gives typical (p50) and heavy-case (p90) mm', () => {
+  // dry majority (7 of 10) with a few wet members: p50 dry, p90 shows the heavy case
+  const a = precipAmount([0, 0, 0, 0, 0, 0, 0, 2, 5, 12]);
+  assert.equal(a.p50, 0); // median member is dry
+  assert.ok(a.p90 > a.p50);
 });
 
 test('agreement returns the dominant scenario and its share', () => {

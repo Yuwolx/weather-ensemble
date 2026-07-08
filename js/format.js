@@ -6,6 +6,7 @@ export const pct = (frac) => `${Math.round(frac * 100)}%`;
 
 export const mm = (v) => (v == null ? '–' : `${v.toFixed(1)}mm`);
 export const ms = (v) => (v == null ? '–' : `${v.toFixed(1)}`);
+export const deg = (v) => (v == null ? '–' : `${Math.round(v)}°`);
 
 // Hour-of-day (0–23) from a local ISO string like "2026-07-08T15:00".
 export const hourOf = (iso) => Number(iso.slice(11, 13));

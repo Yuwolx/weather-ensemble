@@ -48,9 +48,16 @@ check('column segment heights sum to ~100%', [...cols].every((c) => {
   return Math.abs(sum - 100) < 0.6;
 }));
 check('hero "지금" probability is numeric', /^\d+$/.test(txt('#vNow') || ''), txt('#vNow'));
+check('hero meta shows temp + wind', /기온.*바람/.test(txt('#vNowMeta') || ''), txt('#vNowMeta'));
 check('hero read line is populated', (txt('#vLine') || '').length > 5, txt('#vLine'));
-check('hero shows 3 stats', d.querySelectorAll('#vStats .stat').length === 3);
+check('trust line populated', /멤버.*기관/.test(txt('#vTrust') || ''), txt('#vTrust'));
+check('daily digest populated', (txt('#digest') || '').length > 5, txt('#digest'));
 check('region label set', (txt('#vRegion') || '').includes('수원'), txt('#vRegion'));
+check('temp band rendered per hour', d.querySelectorAll('#tempRow .temp-col').length === cols.length,
+  `temp cols=${d.querySelectorAll('#tempRow .temp-col').length}`);
+check('temp bars have a median tick', [...d.querySelectorAll('#tempRow .temp-col')].every((c) => c.querySelector('.temp-col__med')));
+check('detail shows temp + rain-amount readouts', d.querySelectorAll('#detail .ro').length >= 3,
+  `${d.querySelectorAll('#detail .ro').length} readouts`);
 check('day tabs rendered', d.querySelectorAll('#dayTabs .daytab').length >= 1, `${d.querySelectorAll('#dayTabs .daytab').length} tabs`);
 check('exactly one day tab selected', d.querySelectorAll('#dayTabs .daytab[aria-selected="true"]').length === 1);
 check('detail shows 4 scenario bars', d.querySelectorAll('#detail .scen').length === 4);
@@ -60,7 +67,7 @@ check('one column is selected (aria-pressed)', d.querySelectorAll('#stripCols .c
 check('legend has 4 entries', d.querySelectorAll('#legend li').length === 4);
 check('favorites rendered 2 chips', d.querySelectorAll('#favs .chip').length === 2);
 check('overlay hidden after load', d.getElementById('overlay').hidden === true);
-check('wind median rendered', /\d/.test(txt('#detail .wind__val') || ''), txt('#detail .wind__val'));
+check('wind readout rendered (m/s)', [...d.querySelectorAll('#detail .ro')].some((r) => /m\/s/.test(r.textContent)));
 
 // interaction paths: switch to tomorrow, then open the table
 const tabs = d.querySelectorAll('#dayTabs .daytab');
