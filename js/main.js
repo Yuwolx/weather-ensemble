@@ -8,30 +8,27 @@ import { analyzeHour } from './stats.js';
 import { verdict, pct, dateOf } from './format.js';
 import * as ui from './ui.js';
 
-const WINDOW_HOURS = 24; // the strip + verdict horizon: "지금부터 24시간"
+const SUMMARY_HOURS = 24; // the rail summary (지금 + 최대) reasons over the next 24h
 
 const state = {
-  region: null, // { name, sido?, lat, lon }
-  analyzed: [], // future hours only
-  meta: null, // { memberCount, modelCount }
+  region: null,
+  all: [], // all future analyzed hours (today + tomorrow)
+  byDay: new Map(), // date → analyzed hours
+  days: [], // ['2026-07-08', '2026-07-09']
+  activeDay: null,
+  hours: [], // byDay.get(activeDay)
+  selected: 0, // index within `hours`
+  meta: null,
   todayDate: null,
-  selected: 0,
+  nowTime: null,
 };
 
 const $ = (id) => document.getElementById(id);
 const refs = {
-  overlay: $('overlay'),
-  overlayMsg: $('overlayMsg'),
-  spinner: $('spinner'),
-  retry: $('retryBtn'),
-  verdict: {
-    section: $('verdict'),
-    region: $('vRegion'),
-    updated: $('vUpdated'),
-    line: $('vLine'),
-    stats: $('vStats'),
-  },
+  overlay: $('overlay'), overlayMsg: $('overlayMsg'), spinner: $('spinner'), retry: $('retryBtn'),
+  hero: { region: $('vRegion'), updated: $('vUpdated'), now: $('vNow'), line: $('vLine'), stats: $('vStats') },
   strip: { axis: $('stripAxisY'), cols: $('stripCols'), times: $('stripTimes') },
+  dayTabs: $('dayTabs'),
   detail: $('detail'),
   legend: $('legend'),
   favs: $('favs'),
@@ -42,7 +39,7 @@ const refs = {
   tableWrap: $('tableWrap'),
 };
 
-// ---- overlay helpers -------------------------------------------------------
+// ---- overlay ---------------------------------------------------------------
 function showLoading(msg) {
   refs.overlayMsg.textContent = msg || '앙상블 예보를 불러오는 중…';
   refs.spinner.hidden = false;
@@ -56,23 +53,20 @@ function showError(msg, onRetry) {
   refs.retry.onclick = onRetry;
   refs.overlay.hidden = false;
 }
-function hideOverlay() {
-  refs.overlay.hidden = true;
-}
+const hideOverlay = () => (refs.overlay.hidden = true);
 
-// ---- region-local "now" ----------------------------------------------------
-// The API returns local wall-clock times for the region; compute the region's
-// current hour the same way so "지금" and the 24h window are correct regardless of
-// the viewer's own timezone.
+// region-local current hour key (correct regardless of the viewer's timezone)
 function regionNowKey(utcOffsetSeconds) {
   const d = new Date(Date.now() + utcOffsetSeconds * 1000);
   const p = (n) => String(n).padStart(2, '0');
   const date = `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`;
-  const key = `${date}T${p(d.getUTCHours())}`;
-  return { date, key };
+  return { date, key: `${date}T${p(d.getUTCHours())}` };
 }
 
-// ---- load + render a region ------------------------------------------------
+const peakIndex = (hours) =>
+  hours.reduce((best, a, i) => (a.rain.probability > hours[best].rain.probability ? i : best), 0);
+
+// ---- load a region ---------------------------------------------------------
 async function selectRegion(region) {
   state.region = region;
   syncFavPressed();
@@ -80,66 +74,90 @@ async function selectRegion(region) {
   try {
     const data = await loadEnsemble(region.lat, region.lon);
     const { date, key } = regionNowKey(data.utcOffsetSeconds);
-    const future = data.hours
+    const all = data.hours
       .filter((h) => h.time.slice(0, 13) >= key)
-      .slice(0, WINDOW_HOURS)
       .map((h) => analyzeHour(h, PRECIP_BUCKETS, RAIN_THRESHOLD_MM));
+    if (!all.length) throw new Error('표시할 예보 시간이 없습니다.');
 
-    if (!future.length) throw new Error('표시할 예보 시간이 없습니다.');
+    const byDay = new Map();
+    for (const a of all) {
+      const d = dateOf(a.time);
+      if (!byDay.has(d)) byDay.set(d, []);
+      byDay.get(d).push(a);
+    }
 
-    state.analyzed = future;
-    state.meta = { memberCount: data.memberCount, modelCount: data.modelCount };
+    state.all = all;
+    state.byDay = byDay;
+    state.days = [...byDay.keys()];
     state.todayDate = date;
-    // default selection = the peak-rain hour (the most decision-relevant one)
-    state.selected = future.reduce(
-      (best, a, i) => (a.rain.probability > future[best].rain.probability ? i : best),
-      0,
-    );
-    renderAll();
+    state.nowTime = all[0].time;
+    state.meta = { memberCount: data.memberCount, modelCount: data.modelCount };
+    setActiveDay(state.days[0], false);
+
+    renderHero();
+    renderCanvas();
     hideOverlay();
   } catch (err) {
     showError(err.message || '예보를 불러오지 못했습니다.', () => selectRegion(region));
   }
 }
 
-function renderAll() {
-  const { analyzed, todayDate, meta } = state;
-  let peak = analyzed[0];
-  for (const a of analyzed) if (a.rain.probability > peak.rain.probability) peak = a;
-  const rainyCount = analyzed.filter((a) => a.rain.probability >= 0.5).length;
+function setActiveDay(date, rerender = true) {
+  state.activeDay = date;
+  state.hours = state.byDay.get(date);
+  state.selected = peakIndex(state.hours);
+  if (rerender) renderCanvas();
+}
 
-  ui.renderVerdict(refs.verdict, {
+// ---- render ----------------------------------------------------------------
+function renderHero() {
+  const next24 = state.all.slice(0, SUMMARY_HOURS);
+  const v = verdict(next24);
+  const peak = next24[peakIndex(next24)];
+  const rainy = next24.filter((a) => a.rain.probability >= 0.5).length;
+  const { memberCount, modelCount } = state.meta;
+
+  ui.renderHero(refs.hero, {
     region: `${state.region.sido ? state.region.sido + ' ' : ''}${state.region.name}`,
-    updated: `갱신 ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`,
-    verdict: verdict(analyzed),
+    updated: `LIVE · ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`,
+    nowPctNum: String(Math.round(state.all[0].rain.probability * 100)),
+    tone: v.tone,
+    line: v.line,
     stats: [
-      { val: pct(peak.rain.probability), label: '최대 비 확률 (다음 24시간)', accent: true },
-      { val: `${rainyCount}시간`, label: '비 가능 시간 (확률 ≥ 50%)' },
-      { val: String(meta.memberCount), label: `예보 멤버 · ${meta.modelCount}개 기관` },
+      { label: '최대 비 확률 · 다음 24h', val: pct(peak.rain.probability), accent: true },
+      { label: '비 가능 시간 · 확률 ≥ 50%', val: `${rainy}시간` },
+      { label: `예보 멤버 · ${modelCount}개 기관`, val: `${memberCount}개` },
     ],
   });
+}
 
+function renderCanvas() {
+  ui.renderDayTabs(refs.dayTabs, {
+    days: state.days,
+    activeDate: state.activeDay,
+    todayDate: state.todayDate,
+    onSelect: (d) => setActiveDay(d),
+  });
   ui.renderStrip(refs.strip, {
-    analyzed,
-    todayDate,
+    analyzed: state.hours,
+    todayDate: state.todayDate,
+    nowTime: state.nowTime,
     selectedIndex: state.selected,
     onSelect: selectHour,
     onHover: (i, anchor) => {
       if (i < 0) ui.hideTooltip();
-      else ui.showTooltip(analyzed[i], anchor, todayDate);
+      else ui.showTooltip(state.hours[i], anchor, state.todayDate);
     },
   });
-
   renderDetail();
-
   if (refs.tableToggle.getAttribute('aria-expanded') === 'true') {
-    ui.renderTable(refs.tableWrap, { analyzed, todayDate });
+    ui.renderTable(refs.tableWrap, { analyzed: state.hours, todayDate: state.todayDate });
   }
 }
 
 function renderDetail() {
   ui.renderDetail(refs.detail, {
-    analyzedHour: state.analyzed[state.selected],
+    analyzedHour: state.hours[state.selected],
     memberCount: state.meta.memberCount,
     modelCount: state.meta.modelCount,
     todayDate: state.todayDate,
@@ -148,7 +166,6 @@ function renderDetail() {
 
 function selectHour(i) {
   state.selected = i;
-  // update pressed state on columns without a full re-render
   refs.strip.cols.querySelectorAll('.col').forEach((c) => {
     c.setAttribute('aria-pressed', String(Number(c.dataset.i) === i));
   });
@@ -235,7 +252,7 @@ refs.geo.addEventListener('click', async () => {
     const near = nearestRegion(lat, lon, REGIONS);
     await selectRegion({ sido: near.sido, name: `${near.name} 근처`, lat, lon });
   } catch (err) {
-    showError(err.message, () => hideOverlay());
+    showError(err.message, hideOverlay);
   }
 });
 
@@ -244,20 +261,18 @@ refs.strip.cols.addEventListener('keydown', (e) => {
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
   e.preventDefault();
   const delta = e.key === 'ArrowRight' ? 1 : -1;
-  const next = Math.max(0, Math.min(state.analyzed.length - 1, state.selected + delta));
+  const next = Math.max(0, Math.min(state.hours.length - 1, state.selected + delta));
   selectHour(next);
-  const btn = refs.strip.cols.querySelector(`.col[data-i="${next}"]`);
-  if (btn) btn.focus();
+  refs.strip.cols.querySelector(`.col[data-i="${next}"]`)?.focus();
 });
 
 // ---- table toggle ----------------------------------------------------------
 refs.tableToggle.addEventListener('click', () => {
-  const open = refs.tableToggle.getAttribute('aria-expanded') === 'true';
-  const next = !open;
+  const next = refs.tableToggle.getAttribute('aria-expanded') !== 'true';
   refs.tableToggle.setAttribute('aria-expanded', String(next));
-  refs.tableToggle.textContent = next ? '표 접기' : '표로 보기';
+  refs.tableToggle.textContent = next ? '표 접기' : '숫자를 표로 보기';
   refs.tableWrap.hidden = !next;
-  if (next) ui.renderTable(refs.tableWrap, { analyzed: state.analyzed, todayDate: state.todayDate });
+  if (next) ui.renderTable(refs.tableWrap, { analyzed: state.hours, todayDate: state.todayDate });
 });
 
 // ---- boot ------------------------------------------------------------------

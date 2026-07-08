@@ -17,95 +17,102 @@
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand__dot" aria-hidden="true"></span>
-        <span class="brand__name">ENSEMBLE</span>
-        <span class="brand__sub">기상 합의</span>
-      </div>
-
-      <nav class="locations" aria-label="지역 선택">
-        <div class="favs" id="favs"><!-- favorite chips injected --></div>
-
-        <form class="search" id="searchForm" role="search" autocomplete="off">
-          <svg class="search__icon" viewBox="0 0 20 20" aria-hidden="true">
-            <circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.6" />
-            <line x1="13.5" y1="13.5" x2="17" y2="17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-          </svg>
-          <input
-            class="search__input"
-            id="searchInput"
-            type="text"
-            placeholder="전국 시·군·구 검색"
-            aria-label="전국 시군구 검색"
-            aria-expanded="false"
-            aria-controls="suggest"
-          />
-          <ul class="suggest" id="suggest" role="listbox" hidden></ul>
-        </form>
-
-        <button class="geo" id="geoBtn" type="button" title="현재 위치로">
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <circle cx="10" cy="10" r="3" fill="currentColor" />
-            <circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5" />
-            <line x1="10" y1="0.5" x2="10" y2="3" stroke="currentColor" stroke-width="1.5" />
-            <line x1="10" y1="17" x2="10" y2="19.5" stroke="currentColor" stroke-width="1.5" />
-            <line x1="0.5" y1="10" x2="3" y2="10" stroke="currentColor" stroke-width="1.5" />
-            <line x1="17" y1="10" x2="19.5" y2="10" stroke="currentColor" stroke-width="1.5" />
-          </svg>
-          <span>현재 위치</span>
-        </button>
-      </nav>
-    </header>
-
-    <main class="stage" id="stage">
-      <!-- Verdict -->
-      <section class="verdict" id="verdict" aria-live="polite">
-        <div class="verdict__head">
-          <p class="eyebrow" id="vRegion">—</p>
-          <p class="eyebrow eyebrow--muted" id="vUpdated"></p>
+    <div class="app">
+      <!-- ===== Control rail ===== -->
+      <aside class="rail">
+        <div class="brand">
+          <span class="brand__dot" aria-hidden="true"></span>
+          <span class="brand__name">ENSEMBLE</span>
+          <span class="brand__sub">기상 합의</span>
         </div>
-        <p class="verdict__line" id="vLine">불러오는 중…</p>
-        <div class="verdict__stats" id="vStats"></div>
-      </section>
 
-      <!-- Signature: hourly ensemble spread strip -->
-      <section class="panel strip" aria-label="시간별 앙상블 분포">
-        <div class="panel__head">
-          <h2 class="panel__title">시간별 앙상블 분포</h2>
+        <section class="loc" aria-label="지역">
+          <p class="eyebrow">현재 지역</p>
+          <h1 class="loc__name" id="vRegion">—</h1>
+
+          <div class="favs" id="favs"></div>
+
+          <form class="search" id="searchForm" role="search" autocomplete="off">
+            <svg class="search__icon" viewBox="0 0 20 20" aria-hidden="true">
+              <circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.6" />
+              <line x1="13.5" y1="13.5" x2="17" y2="17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+            <input
+              class="search__input"
+              id="searchInput"
+              type="text"
+              placeholder="전국 시·군·구 검색"
+              aria-label="전국 시군구 검색"
+              aria-expanded="false"
+              aria-controls="suggest"
+            />
+            <ul class="suggest" id="suggest" role="listbox" hidden></ul>
+          </form>
+
+          <button class="geo" id="geoBtn" type="button">
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <circle cx="10" cy="10" r="3" fill="currentColor" />
+              <circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+              <line x1="10" y1="0.5" x2="10" y2="3" stroke="currentColor" stroke-width="1.5" />
+              <line x1="10" y1="17" x2="10" y2="19.5" stroke="currentColor" stroke-width="1.5" />
+              <line x1="0.5" y1="10" x2="3" y2="10" stroke="currentColor" stroke-width="1.5" />
+              <line x1="17" y1="10" x2="19.5" y2="10" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+            <span>현재 위치</span>
+          </button>
+        </section>
+
+        <!-- live "right now" readout — the hero state -->
+        <section class="now" aria-live="polite">
+          <div class="live">
+            <span class="live__dot" aria-hidden="true"></span>
+            <span id="vUpdated">LIVE</span>
+          </div>
+          <div class="now__prob">
+            <span class="num" id="vNow">—</span><span class="now__unit">%</span>
+          </div>
+          <p class="now__cap">지금 비 올 확률 · 멤버 합의</p>
+          <p class="now__line" id="vLine">앙상블 예보를 불러오는 중…</p>
+        </section>
+
+        <div class="rail__stats" id="vStats"></div>
+      </aside>
+
+      <!-- ===== Instrument canvas ===== -->
+      <main class="canvas">
+        <div class="canvas__head">
+          <div class="canvas__title">
+            <p class="eyebrow">시간별 앙상블 분포</p>
+            <p class="canvas__hint">막대를 누르면 그 시각의 시나리오가 아래에 열립니다</p>
+          </div>
+          <div class="daytabs" id="dayTabs" role="tablist" aria-label="날짜"></div>
+        </div>
+
+        <section class="strip" aria-label="시간별 앙상블 분포">
           <ul class="legend" id="legend"></ul>
-        </div>
-        <div class="stripwrap">
-          <div class="strip__axis" id="stripAxisY" aria-hidden="true"></div>
-          <div class="strip__cols" id="stripCols" role="group" aria-label="시간별 막대. 화살표 키로 시각을 이동합니다."></div>
-        </div>
-        <div class="strip__times" id="stripTimes" aria-hidden="true"></div>
-      </section>
+          <div class="stripwrap">
+            <div class="strip__axis" id="stripAxisY" aria-hidden="true"></div>
+            <div class="strip__cols" id="stripCols" role="group" aria-label="시간별 막대. 화살표 키로 시각을 이동합니다."></div>
+          </div>
+          <div class="strip__times" id="stripTimes" aria-hidden="true"></div>
+        </section>
 
-      <!-- Selected-hour detail -->
-      <section class="panel detail" id="detail" aria-label="선택한 시각 상세">
-        <!-- injected -->
-      </section>
+        <section class="detail" id="detail" aria-label="선택한 시각 상세"></section>
 
-      <!-- Methodology + table view -->
-      <section class="method">
-        <div class="method__body">
-          <h2 class="method__title">이 앱은 예보하지 않습니다. 세어서 보여줄 뿐입니다.</h2>
-          <p class="method__text" id="methodText">
-            Open-Meteo를 통해 ECMWF·NOAA(GFS)·독일 ICON·캐나다·호주 5개 기관의 앙상블 예보
-            멤버 전체를 그대로 받아옵니다. 각 시각마다 그 수백 개의 예보값을 강수 구간별로 세어
-            확률로 환산할 뿐, 저희가 다시 예측하지 않습니다. 모델들이 갈릴수록 막대가 여러 색으로
-            쪼개집니다 — 그 갈림 자체가 이 앱이 보여주려는 정보입니다.
+        <footer class="method">
+          <p class="method__src" id="methodText">
+            <b>출처</b> — ECMWF·NOAA(GFS)·독일 ICON·캐나다·호주 5개 기관의 앙상블 멤버를
+            Open-Meteo로 받아, 각 시각의 예보값을 강수 구간별로 세어 확률로 환산합니다.
+            저희가 다시 예측하지 않습니다. 막대가 여러 색으로 쪼개질수록 모델 의견이 갈린다는 뜻입니다.
           </p>
           <button class="linkbtn" id="tableToggle" type="button" aria-expanded="false">
-            표로 보기
+            숫자를 표로 보기
           </button>
-        </div>
-        <div class="tablewrap" id="tableWrap" hidden></div>
-      </section>
-    </main>
+          <div class="tablewrap" id="tableWrap" hidden></div>
+        </footer>
+      </main>
+    </div>
 
-    <!-- Loading / error overlay -->
     <div class="overlay" id="overlay" hidden>
       <div class="overlay__box">
         <div class="spinner" id="spinner"></div>

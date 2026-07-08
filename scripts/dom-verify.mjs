@@ -41,27 +41,37 @@ const check = (name, cond, extra = '') =>
   report.push(`${cond ? 'PASS' : 'FAIL'}  ${name}${extra ? '  — ' + extra : ''}`);
 
 check('no JS errors during boot/render', errors.length === 0, errors.join(' | '));
-check('strip rendered 24 hourly columns', cols.length === 24, `got ${cols.length}`);
+check('strip rendered today\'s hourly columns (1–24)', cols.length >= 1 && cols.length <= 24, `got ${cols.length}`);
 check('every column has ≥1 precip segment', [...cols].every((c) => c.querySelectorAll('.col__seg').length >= 1));
 check('column segment heights sum to ~100%', [...cols].every((c) => {
   const sum = [...c.querySelectorAll('.col__seg')].reduce((s, seg) => s + parseFloat(seg.style.height), 0);
   return Math.abs(sum - 100) < 0.6;
 }));
-check('verdict line is populated', (txt('#vLine') || '').length > 5, txt('#vLine'));
-check('verdict shows 3 stat tiles', d.querySelectorAll('#vStats .stat').length === 3);
+check('hero "지금" probability is numeric', /^\d+$/.test(txt('#vNow') || ''), txt('#vNow'));
+check('hero read line is populated', (txt('#vLine') || '').length > 5, txt('#vLine'));
+check('hero shows 3 stats', d.querySelectorAll('#vStats .stat').length === 3);
 check('region label set', (txt('#vRegion') || '').includes('수원'), txt('#vRegion'));
+check('day tabs rendered', d.querySelectorAll('#dayTabs .daytab').length >= 1, `${d.querySelectorAll('#dayTabs .daytab').length} tabs`);
+check('exactly one day tab selected', d.querySelectorAll('#dayTabs .daytab[aria-selected="true"]').length === 1);
 check('detail shows 4 scenario bars', d.querySelectorAll('#detail .scen').length === 4);
 check('detail probability is a %', /%$/.test(txt('#detail .detail__prob') || ''), txt('#detail .detail__prob'));
-check('exactly one column marked "지금"', d.querySelectorAll('#stripCols .col--now').length === 1);
+check('exactly one column marked "지금" on today', d.querySelectorAll('#stripCols .col--now').length === 1);
 check('one column is selected (aria-pressed)', d.querySelectorAll('#stripCols .col[aria-pressed="true"]').length === 1);
 check('legend has 4 entries', d.querySelectorAll('#legend li').length === 4);
 check('favorites rendered 2 chips', d.querySelectorAll('#favs .chip').length === 2);
 check('overlay hidden after load', d.getElementById('overlay').hidden === true);
 check('wind median rendered', /\d/.test(txt('#detail .wind__val') || ''), txt('#detail .wind__val'));
 
-// table toggle path
+// interaction paths: switch to tomorrow, then open the table
+const tabs = d.querySelectorAll('#dayTabs .daytab');
+if (tabs.length > 1) {
+  tabs[1].click();
+  check('day tab switch re-renders strip', d.querySelectorAll('#stripCols .col').length >= 1,
+    `tomorrow cols=${d.querySelectorAll('#stripCols .col').length}`);
+  tabs[0].click(); // back to today
+}
 d.getElementById('tableToggle').click();
-check('table renders rows on toggle', d.querySelectorAll('#tableWrap table.data tbody tr').length === 24,
+check('table renders rows on toggle', d.querySelectorAll('#tableWrap table.data tbody tr').length >= 1,
   `rows=${d.querySelectorAll('#tableWrap table.data tbody tr').length}`);
 
 console.log('\n' + report.join('\n'));

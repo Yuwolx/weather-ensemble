@@ -52,24 +52,43 @@ export function renderLegend(container) {
 
 const TONE_VAR = { dry: 'var(--tone-dry)', maybe: 'var(--tone-maybe)', wet: 'var(--tone-wet)' };
 
-export function renderVerdict(refs, { region, updated, verdict, stats }) {
-  refs.section.style.setProperty('--tone', TONE_VAR[verdict.tone]);
+// The live "right now" readout in the rail: current rain %, the plain-language
+// read, and a compact stat list. The verdict tone drives the accent color.
+export function renderHero(refs, { region, updated, nowPctNum, tone, line, stats }) {
+  document.documentElement.style.setProperty('--tone', TONE_VAR[tone]);
   refs.region.textContent = region;
   refs.updated.textContent = updated;
-  refs.line.textContent = verdict.line;
-
+  refs.now.textContent = nowPctNum;
+  refs.line.textContent = line;
   refs.stats.replaceChildren(
     ...stats.map((s) =>
       el('div', { class: 'stat' }, [
-        el('div', { class: `stat__val${s.accent ? ' stat__val--accent' : ''}`, text: s.val }),
         el('div', { class: 'stat__label', text: s.label }),
+        el('div', { class: `stat__val${s.accent ? ' stat__val--accent' : ''}`, text: s.val }),
       ]),
     ),
   );
 }
 
-// The signature: one column per hour, stacked by precip probability.
-export function renderStrip(refs, { analyzed, todayDate, selectedIndex, onSelect, onHover }) {
+// Day tabs (오늘 / 내일) — the segmented control that makes the canvas operable.
+export function renderDayTabs(container, { days, activeDate, todayDate, onSelect }) {
+  container.replaceChildren(
+    ...days.map((d) =>
+      el('button', {
+        class: 'daytab',
+        type: 'button',
+        role: 'tab',
+        'aria-selected': String(d === activeDate),
+        text: dayLabel(`${d}T00:00`, todayDate),
+        onclick: () => onSelect(d),
+      }),
+    ),
+  );
+}
+
+// The signature: one column per hour, stacked by precip probability. `nowTime`
+// is the ISO of the current hour so we can mark it "지금" wherever it lands.
+export function renderStrip(refs, { analyzed, todayDate, nowTime, selectedIndex, onSelect, onHover }) {
   // y-axis (probability scale)
   refs.axis.replaceChildren(
     ...[100, 75, 50, 25].map((v) =>
@@ -78,12 +97,10 @@ export function renderStrip(refs, { analyzed, todayDate, selectedIndex, onSelect
   );
 
   const cols = analyzed.map((a, i) => {
-    const isNewDay = i > 0 && dateOf(a.time) !== dateOf(analyzed[i - 1].time);
     const classes = ['col'];
-    if (i === 0) classes.push('col--now');
-    if (isNewDay) classes.push('col--daybreak');
+    if (a.time === nowTime) classes.push('col--now');
 
-    const stack = el('div', { class: 'col__stack' });
+    const stack = el('div', { class: 'col__stack', style: `animation-delay:${i * 16}ms` });
     for (const key of SEG_ORDER) {
       const frac = a.dist.fraction[key];
       if (frac <= 0) continue;
