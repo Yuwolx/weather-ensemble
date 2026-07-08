@@ -1,0 +1,13 @@
+{
+  "name": "weather-ensemble",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "여러 예보 모델을 모아 날씨를 확률 분포로 보여주는 앙상블 날씨 계기판",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

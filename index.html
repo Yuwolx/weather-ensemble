@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>기상 합의 · 앙상블 날씨</title>
+    <meta
+      name="description"
+      content="여러 예보 모델을 그대로 모아 날씨를 하나의 숫자가 아닌 확률 분포로 보여주는 앙상블 날씨 계기판"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand__dot" aria-hidden="true"></span>
+        <span class="brand__name">ENSEMBLE</span>
+        <span class="brand__sub">기상 합의</span>
+      </div>
+
+      <nav class="locations" aria-label="지역 선택">
+        <div class="favs" id="favs"><!-- favorite chips injected --></div>
+
+        <form class="search" id="searchForm" role="search" autocomplete="off">
+          <svg class="search__icon" viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.6" />
+            <line x1="13.5" y1="13.5" x2="17" y2="17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+          <input
+            class="search__input"
+            id="searchInput"
+            type="text"
+            placeholder="전국 시·군·구 검색"
+            aria-label="전국 시군구 검색"
+            aria-expanded="false"
+            aria-controls="suggest"
+          />
+          <ul class="suggest" id="suggest" role="listbox" hidden></ul>
+        </form>
+
+        <button class="geo" id="geoBtn" type="button" title="현재 위치로">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="3" fill="currentColor" />
+            <circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <line x1="10" y1="0.5" x2="10" y2="3" stroke="currentColor" stroke-width="1.5" />
+            <line x1="10" y1="17" x2="10" y2="19.5" stroke="currentColor" stroke-width="1.5" />
+            <line x1="0.5" y1="10" x2="3" y2="10" stroke="currentColor" stroke-width="1.5" />
+            <line x1="17" y1="10" x2="19.5" y2="10" stroke="currentColor" stroke-width="1.5" />
+          </svg>
+          <span>현재 위치</span>
+        </button>
+      </nav>
+    </header>
+
+    <main class="stage" id="stage">
+      <!-- Verdict -->
+      <section class="verdict" id="verdict" aria-live="polite">
+        <div class="verdict__head">
+          <p class="eyebrow" id="vRegion">—</p>
+          <p class="eyebrow eyebrow--muted" id="vUpdated"></p>
+        </div>
+        <p class="verdict__line" id="vLine">불러오는 중…</p>
+        <div class="verdict__stats" id="vStats"></div>
+      </section>
+
+      <!-- Signature: hourly ensemble spread strip -->
+      <section class="panel strip" aria-label="시간별 앙상블 분포">
+        <div class="panel__head">
+          <h2 class="panel__title">시간별 앙상블 분포</h2>
+          <ul class="legend" id="legend"></ul>
+        </div>
+        <div class="stripwrap">
+          <div class="strip__axis" id="stripAxisY" aria-hidden="true"></div>
+          <div class="strip__cols" id="stripCols" role="group" aria-label="시간별 막대. 화살표 키로 시각을 이동합니다."></div>
+        </div>
+        <div class="strip__times" id="stripTimes" aria-hidden="true"></div>
+      </section>
+
+      <!-- Selected-hour detail -->
+      <section class="panel detail" id="detail" aria-label="선택한 시각 상세">
+        <!-- injected -->
+      </section>
+
+      <!-- Methodology + table view -->
+      <section class="method">
+        <div class="method__body">
+          <h2 class="method__title">이 앱은 예보하지 않습니다. 세어서 보여줄 뿐입니다.</h2>
+          <p class="method__text" id="methodText">
+            Open-Meteo를 통해 ECMWF·NOAA(GFS)·독일 ICON·캐나다·호주 5개 기관의 앙상블 예보
+            멤버 전체를 그대로 받아옵니다. 각 시각마다 그 수백 개의 예보값을 강수 구간별로 세어
+            확률로 환산할 뿐, 저희가 다시 예측하지 않습니다. 모델들이 갈릴수록 막대가 여러 색으로
+            쪼개집니다 — 그 갈림 자체가 이 앱이 보여주려는 정보입니다.
+          </p>
+          <button class="linkbtn" id="tableToggle" type="button" aria-expanded="false">
+            표로 보기
+          </button>
+        </div>
+        <div class="tablewrap" id="tableWrap" hidden></div>
+      </section>
+    </main>
+
+    <!-- Loading / error overlay -->
+    <div class="overlay" id="overlay" hidden>
+      <div class="overlay__box">
+        <div class="spinner" id="spinner"></div>
+        <p class="overlay__msg" id="overlayMsg">앙상블 예보를 불러오는 중…</p>
+        <button class="btn" id="retryBtn" type="button" hidden>다시 시도</button>
+      </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

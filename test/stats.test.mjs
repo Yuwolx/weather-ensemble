@@ -1,0 +1,87 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  classifyPrecip,
+  precipDistribution,
+  rainProbability,
+  windStats,
+  agreement,
+} from '../js/stats.js';
+import { PRECIP_BUCKETS, RAIN_THRESHOLD_MM } from '../js/config.js';
+
+test('classifyPrecip puts values in the right bucket (half-open [min,max))', () => {
+  assert.equal(classifyPrecip(0, PRECIP_BUCKETS), 'dry');
+  assert.equal(classifyPrecip(0.09, PRECIP_BUCKETS), 'dry');
+  assert.equal(classifyPrecip(0.1, PRECIP_BUCKETS), 'light'); // boundary belongs to upper bucket
+  assert.equal(classifyPrecip(0.9, PRECIP_BUCKETS), 'light');
+  assert.equal(classifyPrecip(1.0, PRECIP_BUCKETS), 'mod');
+  assert.equal(classifyPrecip(3.9, PRECIP_BUCKETS), 'mod');
+  assert.equal(classifyPrecip(4.0, PRECIP_BUCKETS), 'heavy');
+  assert.equal(classifyPrecip(50, PRECIP_BUCKETS), 'heavy');
+});
+
+test('precipDistribution returns fractions that sum to 1 and match counts', () => {
+  // 10 members: 6 dry, 2 light, 1 mod, 1 heavy
+  const members = [0, 0, 0, 0, 0, 0.05, 0.2, 0.5, 2.0, 10.0];
+  const d = precipDistribution(members, PRECIP_BUCKETS);
+  assert.equal(d.n, 10);
+  assert.equal(d.counts.dry, 6);
+  assert.equal(d.counts.light, 2);
+  assert.equal(d.counts.mod, 1);
+  assert.equal(d.counts.heavy, 1);
+  assert.equal(d.fraction.dry, 0.6);
+  assert.equal(d.fraction.light, 0.2);
+  const sum = Object.values(d.fraction).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum - 1) < 1e-9);
+});
+
+test('precipDistribution ignores null/undefined/NaN members', () => {
+  const members = [0, null, 0.5, undefined, NaN, 5];
+  const d = precipDistribution(members, PRECIP_BUCKETS);
+  assert.equal(d.n, 3); // only 0, 0.5, 5 are valid
+  assert.equal(d.counts.dry, 1);
+  assert.equal(d.counts.light, 1);
+  assert.equal(d.counts.heavy, 1);
+});
+
+test('precipDistribution with no valid data reports n=0 and zero fractions', () => {
+  const d = precipDistribution([null, NaN], PRECIP_BUCKETS);
+  assert.equal(d.n, 0);
+  for (const b of PRECIP_BUCKETS) assert.equal(d.fraction[b.key], 0);
+});
+
+test('rainProbability is the share of members at or above the threshold', () => {
+  const members = [0, 0, 0.05, 0.1, 0.5, 5]; // >=0.1 -> 3 of 6
+  const r = rainProbability(members, RAIN_THRESHOLD_MM);
+  assert.equal(r.n, 6);
+  assert.equal(r.probability, 0.5);
+});
+
+test('rainProbability skips nulls and reports n=0 cleanly when empty', () => {
+  const r = rainProbability([null, undefined], RAIN_THRESHOLD_MM);
+  assert.equal(r.n, 0);
+  assert.equal(r.probability, 0);
+});
+
+test('windStats reports median and a p10-p90 spread', () => {
+  const members = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const w = windStats(members);
+  assert.equal(w.n, 10);
+  assert.ok(Math.abs(w.median - 5.5) < 1e-9);
+  assert.ok(w.p10 >= 1 && w.p10 <= w.median);
+  assert.ok(w.p90 <= 10 && w.p90 >= w.median);
+  assert.equal(w.max, 10);
+});
+
+test('agreement returns the dominant scenario and its share', () => {
+  // heavy consensus: 9 dry, 1 light -> dominant dry, share 0.9
+  const strong = precipDistribution([0,0,0,0,0,0,0,0,0,0.2], PRECIP_BUCKETS);
+  const a1 = agreement(strong);
+  assert.equal(a1.dominantKey, 'dry');
+  assert.ok(Math.abs(a1.share - 0.9) < 1e-9);
+
+  // total split: 5 dry, 5 heavy -> low agreement (share 0.5)
+  const split = precipDistribution([0,0,0,0,0,5,5,5,5,5], PRECIP_BUCKETS);
+  const a2 = agreement(split);
+  assert.ok(a2.share <= 0.5 + 1e-9);
+});
