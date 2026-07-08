@@ -52,6 +52,11 @@
 html {
   -webkit-text-size-adjust: 100%;
 }
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden; /* nothing should ever push the page sideways */
+}
 body {
   margin: 0;
   background: var(--surface);
@@ -61,6 +66,10 @@ body {
   line-height: 1.5;
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
+}
+.rail,
+.canvas {
+  min-width: 0; /* flex children must be allowed to shrink below content width */
 }
 
 .num,
@@ -410,6 +419,10 @@ body {
   position: relative;
   display: flex;
   gap: 10px;
+}
+/* clearance so the "지금" marker above the current column clears the legend */
+.chartblock:not(.chartblock--temp) .stripwrap {
+  padding-top: 18px;
 }
 .strip__axis {
   position: relative;
@@ -892,46 +905,71 @@ table.data td .num {
   .app {
     flex-direction: column;
   }
+  /* the control rail becomes a tight header, not a tall column */
   .rail {
     width: auto;
     height: auto;
     position: static;
     border-right: none;
     border-bottom: 1px solid var(--hairline);
-    gap: 22px;
+    padding: 12px 16px 12px;
+    gap: 10px;
   }
-  .rail__stats {
-    margin-top: 0;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0 28px;
+  .loc {
+    gap: 7px;
   }
-  .stat {
-    border-top: none;
-    padding: 0;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
+  .loc .eyebrow {
+    display: none; /* "현재 지역" label is redundant on the phone header */
   }
-  .now__prob .num {
-    font-size: 56px;
+  .loc__name {
+    font-size: 20px;
+    margin: 0;
+  }
+  .search__input {
+    padding: 6px 4px 6px 24px;
+    font-size: 13.5px;
+  }
+  .now {
+    padding-top: 10px;
+  }
+  .live {
+    margin-bottom: 7px;
+  }
+  .now__line {
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  .now__meta {
+    margin-top: 6px;
   }
   .canvas {
-    padding: 24px 20px 56px;
+    padding: 14px 16px 40px;
+  }
+  .canvas__head {
+    margin-bottom: 10px;
+  }
+  .canvas__hint {
+    font-size: 12.5px;
+    margin-top: 4px;
+  }
+  .board__when {
+    font-size: 18px;
   }
 }
 @media (max-width: 560px) {
   .canvas__head {
     flex-direction: column;
-    gap: 14px;
+    gap: 10px;
   }
   .board__cond {
-    gap: 24px;
+    gap: 22px;
+    margin-top: 12px;
+    padding-top: 12px;
   }
   .scenario {
-    grid-template-columns: 66px 1fr 48px;
+    grid-template-columns: 58px 1fr 44px;
     gap: 10px;
-    padding: 10px 8px;
+    padding: 7px 6px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

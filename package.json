@@ -8,6 +8,7 @@
     "test": "node --test"
   },
   "dependencies": {
-    "jsdom": "^29.1.1"
+    "jsdom": "^29.1.1",
+    "puppeteer-core": "^25.3.0"
   }
 }
