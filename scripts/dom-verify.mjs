@@ -65,26 +65,20 @@ check('time axis labels every other hour with ticks', d.querySelectorAll('#strip
   `${d.querySelectorAll('#stripTimes .tick--on').length} labeled`);
 check('day tabs rendered', d.querySelectorAll('#dayTabs .daytab').length >= 1, `${d.querySelectorAll('#dayTabs .daytab').length} tabs`);
 check('exactly one day tab selected', d.querySelectorAll('#dayTabs .daytab[aria-selected="true"]').length === 1);
-check('board shows 4 bettable scenarios', d.querySelectorAll('#board .scenario').length === 4);
+check('board shows 4 scenarios', d.querySelectorAll('#board .scenario').length === 4);
 check('each scenario shows a %', [...d.querySelectorAll('#board .scenario .scenario__pct')].every((e) => /%$/.test(e.textContent)));
 check('exactly one leading scenario highlighted', d.querySelectorAll('#board .scenario.is-lead').length === 1);
-check('settled section hidden with no matured bets', d.getElementById('settled').hidden === true);
 check('exactly one column marked "지금" on today', d.querySelectorAll('#stripCols .col--now').length === 1);
 check('one column is selected (aria-pressed)', d.querySelectorAll('#stripCols .col[aria-pressed="true"]').length === 1);
 check('legend has 4 entries', d.querySelectorAll('#legend li').length === 4);
 check('favorites rendered 2 chips', d.querySelectorAll('#favs .chip').length === 2);
 check('overlay hidden after load', d.getElementById('overlay').hidden === true);
 
-// betting interaction: tap a scenario → it becomes "내 선택" and persists
-const firstScenario = d.querySelector('#board .scenario');
-firstScenario.click();
-check('tapping a scenario marks it picked', d.querySelector('#board .scenario.is-picked') != null);
-check('bet persisted to localStorage', [...Array(dom.window.localStorage.length)].some((_, i) =>
-  dom.window.localStorage.key(i).startsWith('wx-bet:')));
-check('picked scenario shows 내 선택 label', /내 선택/.test(d.querySelector('#board .scenario.is-picked')?.textContent || ''));
-// tap again → clears
+// selection interaction: tap a scenario → highlight; tap again → clears (no storage)
+d.querySelector('#board .scenario').click();
+check('tapping a scenario highlights it', d.querySelectorAll('#board .scenario.is-picked').length === 1);
 d.querySelector('#board .scenario.is-picked').click();
-check('tapping the pick again clears it', d.querySelector('#board .scenario.is-picked') == null);
+check('tapping it again clears the highlight', d.querySelector('#board .scenario.is-picked') == null);
 
 // interaction paths: switch to tomorrow, then open the table
 const tabs = d.querySelectorAll('#dayTabs .daytab');

@@ -632,7 +632,7 @@ body {
 /* each scenario is a big tappable row — this is where the "볼맛" lives */
 .scenario {
   display: grid;
-  grid-template-columns: 78px 1fr 52px 52px;
+  grid-template-columns: 78px 1fr 56px;
   align-items: center;
   gap: 14px;
   width: 100%;
@@ -683,28 +683,13 @@ body {
   font-size: 20px;
   color: var(--ink);
 }
-.scenario__pick {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--brand);
-  text-align: right;
-  white-space: nowrap;
-}
+/* tapped scenario — an ephemeral highlight (focus), no persistence */
 .scenario.is-picked {
   background: var(--brand-soft);
   box-shadow: inset 0 0 0 1.5px var(--brand);
 }
 .scenario.is-picked:hover {
   background: var(--brand-soft);
-}
-.board__hint {
-  margin: 16px 0 0;
-  font-size: 13px;
-  color: var(--ink-faint);
-}
-.board__hint--set {
-  color: var(--brand);
-  font-weight: 500;
 }
 .board__cond {
   display: flex;
@@ -716,49 +701,6 @@ body {
 }
 .board__cond .windblock {
   min-width: 150px;
-}
-
-/* ===== Settled bets — the payoff on return visits ===== */
-.settled {
-  margin-top: 40px;
-  padding-top: 20px;
-  border-top: 1px solid var(--hairline);
-}
-.settled__row {
-  display: grid;
-  grid-template-columns: auto auto auto 1fr;
-  gap: 16px;
-  align-items: baseline;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--hairline);
-  font-size: 13px;
-}
-.settled .eyebrow {
-  margin-bottom: 12px;
-}
-.settled__when {
-  color: var(--ink-subtle);
-}
-.settled__pick {
-  color: var(--ink-muted);
-}
-.settled__actual {
-  color: var(--ink);
-  font-weight: 500;
-}
-.settled__verdict {
-  text-align: right;
-  font-weight: 700;
-  color: var(--ink-subtle);
-}
-.settled__row.is-won .settled__verdict {
-  color: var(--tone-dry);
-}
-.settled__row.is-underdog {
-  background: rgba(224, 123, 57, 0.05);
-}
-.settled__row.is-underdog .settled__verdict {
-  color: var(--temp-warm);
 }
 
 .ro {
@@ -1006,17 +948,9 @@ table.data td .num {
     gap: 24px;
   }
   .scenario {
-    grid-template-columns: 66px 1fr 44px 44px;
+    grid-template-columns: 66px 1fr 48px;
     gap: 10px;
     padding: 10px 8px;
-  }
-  .settled__row {
-    grid-template-columns: 1fr 1fr;
-    gap: 6px 12px;
-  }
-  .settled__verdict {
-    grid-column: 1 / -1;
-    text-align: left;
   }
 }
 @media (prefers-reduced-motion: reduce) {

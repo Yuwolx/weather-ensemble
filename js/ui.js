@@ -178,31 +178,30 @@ function readout(label, value, sub) {
   ]);
 }
 
-// The hero board: the selected hour's competing scenarios, each a big tappable row
-// (place your bet). Leading scenario emphasized; alternatives never hidden. This is
-// the protagonist — no single collapsed probability.
-export function renderBoard(container, { analyzedHour, todayDate, bet, onBet }) {
+// The hero board: the selected hour's competing scenarios, each a big row you can
+// tap to highlight. The leading scenario is emphasized but alternatives are never
+// hidden — this is the protagonist, in place of a single collapsed probability.
+export function renderBoard(container, { analyzedHour, todayDate, picked, onPick }) {
   const a = analyzedHour;
   const leadKey = agreement(a.dist).dominantKey;
 
   const rows = PRECIP_BUCKETS.map((b) => {
     const frac = a.dist.fraction[b.key];
-    const picked = bet && bet.betKey === b.key;
+    const isPicked = picked === b.key;
     const cls = ['scenario'];
     if (b.key === leadKey) cls.push('is-lead');
-    if (picked) cls.push('is-picked');
+    if (isPicked) cls.push('is-picked');
     return el('button', {
       class: cls.join(' '),
       type: 'button',
-      'aria-pressed': String(!!picked),
-      onclick: () => onBet(b.key, frac),
+      'aria-pressed': String(isPicked),
+      onclick: () => onPick(b.key),
     }, [
       el('span', { class: 'scenario__label', text: b.label }),
       el('span', { class: 'scenario__track' }, [
         el('span', { class: 'scenario__fill', style: `width:${Math.max(frac * 100, 1.5)}%;background:var(--p-${b.key})` }),
       ]),
       el('span', { class: 'scenario__pct num', text: pct(frac) }),
-      el('span', { class: 'scenario__pick', text: picked ? '내 선택' : '' }),
     ]);
   });
 
@@ -214,18 +213,12 @@ export function renderBoard(container, { analyzedHour, todayDate, bet, onBet }) 
   const bandW = (((w.p90 ?? 0) - (w.p10 ?? 0)) / wmax) * 100;
   const medL = ((w.median ?? 0) / wmax) * 100;
 
-  const hint = bet
-    ? el('p', { class: 'board__hint board__hint--set' },
-        `선택함: ${labelOf(bet.betKey)} · 이 시각이 지나면 결과를 알려드립니다. (다시 누르면 취소)`)
-    : el('p', { class: 'board__hint' }, '시나리오 하나를 눌러 두면, 지난 뒤 실제로 뭐가 왔는지 알려드립니다.');
-
   container.replaceChildren(
     el('div', { class: 'board__head' }, [
       el('h2', { class: 'board__when', text: `${dayLabel(a.time, todayDate)} ${hourLabel(a.time)}` }),
       el('span', { class: 'board__sub', text: `${a.dist.n}개 예보가 이렇게 갈립니다` }),
     ]),
     el('div', { class: 'board__scenarios' }, rows),
-    hint,
     el('div', { class: 'board__cond' }, [
       readout('기온', deg(t.median), t.p10 != null ? `${deg(t.p10)}–${deg(t.p90)}` : null),
       readout('예상 강수량', amt.p50 > 0 ? mm(amt.p50) : '0mm', amt.p90 > 0 ? `많으면 ${mm(amt.p90)}` : '대부분 0mm'),
@@ -243,38 +236,6 @@ export function renderBoard(container, { analyzedHour, todayDate, bet, onBet }) 
     ]),
   );
 }
-
-// Resolved past bets — the payoff. Shows what you picked, what actually fell, and
-// celebrates when an underdog (a scenario the models doubted) came true.
-export function renderSettled(container, settled, todayDate) {
-  if (!settled.length) {
-    container.hidden = true;
-    container.replaceChildren();
-    return;
-  }
-  container.hidden = false;
-  container.replaceChildren(
-    el('p', { class: 'eyebrow', text: '지난 예측 결과' }),
-    ...settled.map((s) => {
-      const cls = ['settled__row'];
-      if (s.won) cls.push('is-won');
-      if (s.underdog) cls.push('is-underdog');
-      let verdict;
-      if (s.won && s.underdog) verdict = `적중 — 게다가 ${pct(s.betProb)}짜리를 맞혔습니다`;
-      else if (s.won) verdict = '적중';
-      else if (s.underdog) verdict = `${pct(s.actualProb)} ${labelOf(s.actualKey)}가 이겼습니다`;
-      else verdict = `빗나감 — 실제는 ${labelOf(s.actualKey)}`;
-      return el('div', { class: cls.join(' ') }, [
-        el('span', { class: 'settled__when num', text: `${dayLabel(s.time, todayDate)} ${hourLabel(s.time)}` }),
-        el('span', { class: 'settled__pick', text: `내 선택 ${labelOf(s.betKey)}` }),
-        el('span', { class: 'settled__actual', text: `실제 ${labelOf(s.actualKey)} (${mm(s.actualMm)})` }),
-        el('span', { class: 'settled__verdict', text: verdict }),
-      ]);
-    }),
-  );
-}
-
-const labelOf = (key) => bucketOf(key)?.label ?? key;
 
 let tooltipEl = null;
 export function showTooltip(analyzedHour, anchor, todayDate) {
