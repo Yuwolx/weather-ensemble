@@ -106,14 +106,12 @@
 - 단순화 커밋에서 제거된 것: 기온 p10–p90 밴드 차트, 레일 판정문/미니라인, 하루 요약, 바람 그래프.
 - **남은 알려진 이슈**: 실브라우저 검증은 이 PC(headless)로 완료, 실기기(폰 PWA) 확인은 미실시.
 
-## 배포 (준비 완료, 스위치만 남음)
+## 배포 (2026-07-10 완료)
 
-- **정적 서빙 준비 끝**: 모든 경로 상대(`./`), manifest scope `./`, `.nojekyll` 추가,
-  SW ASSETS 최신(v4). GitHub Pages 서브패스(`/weather-ensemble/`)에서 그대로 동작.
-- **절차**(사용자만 가능): ①레포 Settings → General → 공개(public) 전환
-  ②Settings → Pages → Source: Deploy from a branch → main / (root) → Save
-  ③1~2분 후 `https://yuwolx.github.io/weather-ensemble/` 접속, 폰에서 "홈 화면에 추가".
-- 공개 전환이 싫으면 대안: Cloudflare Pages/Netlify 무료(private 레포 연결 가능, 계정 연결 필요).
+- **라이브: https://yuwolx.github.io/weather-ensemble/** — 사용자 승인("기상청 되면 퍼블릭으로")
+  후 gh CLI로 공개 전환 + Pages(main/root) 활성화. 모든 경로 상대·`.nojekyll`·SW v4.
+- 이후 배포 = `git push`가 곧 배포(1~2분). **셸 파일 바꾸면 sw.js CACHE 버전 범프 잊지 말 것.**
+- 레포가 이제 **public**임을 전제로 작업(비밀·키 커밋 금지).
 
 ## 모바일 접근성 (2026-07-10 정비)
 
@@ -124,10 +122,10 @@
 
 ## 다음 후보 (무료 서비스 방향 기준, 업데이트)
 
-1. **배포 스위치**(위 절차, 사용자 결정 대기).
-2. **회고 확장** — v1(어제 한 시각)을 넘어: 여러 날 누적 캘리브레이션("30%라던 날 실제로
-   10번 중 3번 왔나"), 어제 전체 시간대 미니 스트립. 스냅샷이 쌓여야 의미 → 기기당 14일 보관 중.
-3. 기상청 공식 예보 기준선 얹기(공공데이터 키 ~1일), 비/눈 분리(겨울).
+1. **회고 확장** — 여러 날 누적 캘리브레이션("30%라던 날 실제로 10번 중 3번 왔나").
+   스냅샷·기록이 쌓여야 의미 → 기기당 14일 보관 중.
+2. 비/눈 분리(겨울), 기상청 **공식 발표** 예보(예보관 판단) 얹기는 공공데이터 키+프록시(Actions
+   cron→정적 JSON) 필요 — KIM 수치모델 마커는 이미 있음(2026-07-10).
 - 위치: `Desktop\취업진로\weather-ensemble` · 원격 **github.com/Yuwolx/weather-ensemble (private)**
 
 ## 작업 습관 (반드시 지킬 것)
