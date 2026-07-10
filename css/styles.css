@@ -51,14 +51,14 @@
   --air-deep: #f4f5f7;
 
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 
 /* the day's air: data-mood is set by main.js from the active day's forecast */
 :root[data-mood="clear"] {
-  --air: #fbf3e3;
-  --air-deep: #f7ead1;
+  --air: #faf4e7;
+  --air-deep: #f6edda;
 }
 :root[data-mood="unsettled"] {
   --air: #f1f3f6;
@@ -171,9 +171,9 @@ body {
 
 .loc__name {
   margin: 0;
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-size: 29px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
   line-height: 1.15;
 }
 .favs {
@@ -188,8 +188,8 @@ body {
   color: var(--ink-muted);
   background: none;
   border: none;
-  border-radius: 999px;
-  padding: 5px 11px;
+  border-radius: 7px;
+  padding: 5px 10px;
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
   white-space: nowrap;
@@ -220,11 +220,11 @@ body {
   font-family: var(--sans);
   font-size: 13.5px;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px solid rgba(23, 24, 28, 0.08);
-  border-radius: 999px;
-  padding: 7px 14px 7px 31px;
-  transition: border-color 0.15s, background 0.15s, width 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(23, 24, 28, 0.09);
+  border-radius: 9px;
+  padding: 7px 12px 7px 31px;
+  transition: border-color 0.15s, background 0.15s, width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .search__input::placeholder {
   color: var(--ink-faint);
@@ -279,9 +279,9 @@ body {
   width: 32px;
   height: 32px;
   color: var(--ink-muted);
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px solid rgba(23, 24, 28, 0.08);
-  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(23, 24, 28, 0.09);
+  border-radius: 9px;
   padding: 0;
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
@@ -313,35 +313,39 @@ body {
   margin-bottom: 22px;
   flex-wrap: wrap;
 }
-/* Day tabs — a soft segmented pill floating on the sky */
+/* Day tabs — quiet editorial text tabs; the active day simply carries the ink */
 .daytabs {
   display: flex;
-  gap: 3px;
+  gap: 22px;
   flex: none;
-  background: rgba(23, 24, 28, 0.055);
-  border-radius: 999px;
-  padding: 3px;
 }
 .daytab {
   font-family: var(--sans);
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 500;
-  color: var(--ink-subtle);
+  color: var(--ink-faint);
   background: none;
   border: none;
-  padding: 6px 18px;
-  border-radius: 999px;
+  padding: 6px 1px 8px;
+  position: relative;
   cursor: pointer;
-  transition: color 0.2s, background 0.2s;
+  transition: color 0.25s;
 }
 .daytab:hover {
   color: var(--ink-muted);
 }
 .daytab[aria-selected="true"] {
   color: var(--ink);
-  font-weight: 600;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(23, 24, 28, 0.1);
+  font-weight: 650;
+}
+.daytab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 1.5px;
+  background: var(--ink);
 }
 
 /* Legend — round dots under the strip so the stack colors read without hover
@@ -374,7 +378,7 @@ body {
   gap: 10px;
 }
 .strip {
-  margin-top: 34px;
+  margin-top: 46px;
 }
 /* clearance so the "지금" marker above the current column clears the label above */
 .strip .stripwrap {
@@ -382,9 +386,10 @@ body {
 }
 .strip__label {
   margin: 0 0 4px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--ink-subtle);
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
 }
 .strip__axis {
   position: relative;
@@ -440,11 +445,11 @@ body {
   flex-direction: column;
   height: 100%;
   width: 100%;
-  border-radius: 6px 6px 0 0;
+  border-radius: 3px 3px 0 0;
   overflow: hidden;
   transform-origin: bottom;
   transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
-  animation: grow 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
+  animation: grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .col:hover .col__stack {
   transform: translateY(-3px);
@@ -541,7 +546,7 @@ body {
 }
 /* re-rendered content settles in with a small breath rather than snapping */
 .board > * {
-  animation: fadeup 0.35s cubic-bezier(0.25, 1, 0.5, 1) both;
+  animation: fadeup 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .board > :nth-child(2) {
   animation-delay: 0.04s;
@@ -558,9 +563,9 @@ body {
 }
 .board__when {
   margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
 }
 .board__sub {
   font-size: 13px;
@@ -569,45 +574,46 @@ body {
 .board__scenarios {
   display: flex;
   flex-direction: column;
-  gap: 7px;
 }
-/* each scenario is a soft band of light resting on the sky — the lead one
-   glows brightest. No borders, no hard cards; just pooled light. */
+/* Editorial rows: no boxes, no bubbles. Hairlines and type hierarchy carry the
+   structure; the probability bar is a thin, precise instrument line. The lead
+   scenario is louder only in ink — restraint is the point. */
 .scenario {
   display: grid;
-  grid-template-columns: 76px 1fr 64px;
+  grid-template-columns: 84px 1fr 76px;
   align-items: center;
-  gap: 14px;
+  gap: 18px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.5);
+  background: none;
   border: none;
-  padding: 13px 18px;
-  border-radius: 16px;
+  border-top: 1px solid rgba(23, 24, 28, 0.08);
+  padding: 15px 6px;
+  border-radius: 0;
   cursor: pointer;
   text-align: left;
   font-family: var(--sans);
-  transition: background 0.2s, transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: background 0.25s;
+}
+.scenario:first-child {
+  border-top: none;
 }
 .scenario:hover {
-  background: rgba(255, 255, 255, 0.78);
-  transform: translateY(-1px);
-}
-.scenario.is-lead {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.45);
 }
 .scenario__label {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 500;
-  color: var(--ink-muted);
+  color: var(--ink-subtle);
+  letter-spacing: -0.005em;
 }
 .scenario.is-lead .scenario__label {
   color: var(--ink);
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: 650;
+  font-size: 15.5px;
 }
 .scenario__track {
-  height: 14px;
-  background: rgba(23, 24, 28, 0.07);
+  height: 5px;
+  background: rgba(23, 24, 28, 0.08);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -617,25 +623,31 @@ body {
   border-radius: 999px;
   /* no minimum — 0% must be an honestly empty track */
   transform-origin: left;
-  animation: growx 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
+  animation: growx 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .scenario__pct {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   text-align: right;
-  color: var(--ink-muted);
+  color: var(--ink-subtle);
 }
 .scenario.is-lead .scenario__pct {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
   color: var(--ink);
 }
-/* picked = a soft pool of the data's own blue, not a hard brand border */
+/* picked = a quiet pool of the data's own blue */
 .scenario.is-picked,
 .scenario.is-picked:hover {
-  background: rgba(47, 127, 224, 0.13);
+  background: rgba(47, 127, 224, 0.08);
+  border-radius: 10px;
+  border-top-color: transparent;
+}
+.scenario.is-picked + .scenario {
+  border-top-color: transparent;
 }
 .scenario.is-picked .scenario__label {
   color: var(--ink);
@@ -816,13 +828,12 @@ table.data td .num {
     font-size: 21px;
   }
   .scenario {
-    grid-template-columns: 64px 1fr 54px;
-    gap: 10px;
-    padding: 11px 13px;
-    border-radius: 14px;
+    grid-template-columns: 64px 1fr 60px;
+    gap: 12px;
+    padding: 13px 4px;
   }
   .scenario.is-lead .scenario__pct {
-    font-size: 19px;
+    font-size: 21px;
   }
   .search__input {
     width: 118px;
