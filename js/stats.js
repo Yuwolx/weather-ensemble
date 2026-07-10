@@ -100,6 +100,39 @@ export function dayMood(hours, thresholds) {
   return 'clear';
 }
 
+// ---- Retrospect (돌아보기) --------------------------------------------------
+// Pure comparison of a stored forecast snapshot against what actually fell.
+
+// Which hour of yesterday is worth retelling: the one where the most rain
+// actually fell — or, on a dry day, the one the forecast was most nervous about
+// (highest non-dry chance), so "안 옴이 맞았다" still has a subject.
+export function pickRetroHour(snapHours, actualsByTime) {
+  const overlapping = snapHours.filter((s) => actualsByTime.has(s.time));
+  if (!overlapping.length) return null;
+  const mmOf = (s) => actualsByTime.get(s.time);
+  const wet = overlapping.filter((s) => mmOf(s) >= 0.1);
+  const pool = wet.length ? wet : overlapping;
+  const score = wet.length ? mmOf : (s) => 1 - s.fraction.dry;
+  const best = pool.reduce((a, b) => (score(b) > score(a) ? b : a));
+  return { time: best.time, snap: best, mm: mmOf(best) };
+}
+
+// The honest verdict: which scenario actually happened, whether it was the
+// forecast favorite, and what probability the winner had been given. hit=false
+// with a small prob is the whole point — 작은 확률의 승리이지 예보의 배신이 아니다.
+export function retroVerdict(fraction, actualMm, buckets) {
+  const actualKey = classifyPrecip(actualMm, buckets);
+  let dominantKey = null;
+  let max = -1;
+  for (const b of buckets) {
+    if (fraction[b.key] > max) {
+      max = fraction[b.key];
+      dominantKey = b.key;
+    }
+  }
+  return { actualKey, dominantKey, hit: actualKey === dominantKey, prob: fraction[actualKey] };
+}
+
 // How much the models agree, derived from an existing precip distribution: the
 // dominant scenario and the share of members backing it. share≈1 → strong consensus;
 // share near 1/#buckets → the models are all over the place (which is itself the

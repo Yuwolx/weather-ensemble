@@ -197,6 +197,58 @@ export function hideTooltip() {
   if (tooltipEl) tooltipEl.style.display = 'none';
 }
 
+// 돌아보기 — yesterday's forecast distribution settled against what actually
+// fell. Information only (no bets, no scores): the sentence must make an upset
+// feel like "작은 확률이 이겼다", never "예보가 틀렸다".
+export function renderRetro(container, data) {
+  const head = el('p', { class: 'eyebrow', text: '돌아보기' });
+  if (!data) {
+    container.replaceChildren(
+      head,
+      el('p', {
+        class: 'retro__empty',
+        text: '오늘 본 경우의 수를 이 기기가 기억해 뒀다가, 내일 실제 날씨와 대조해 보여드립니다.',
+      }),
+    );
+    return;
+  }
+  const { time, fraction, mm: actualMm, verdict, todayDate } = data;
+  const segs = PRECIP_BUCKETS.filter((b) => fraction[b.key] > 0).map((b) =>
+    el('span', { class: 'retro__seg', style: `width:${fraction[b.key] * 100}%;background:var(--p-${b.key})` }),
+  );
+  // the marker sits under the middle of the scenario that actually happened
+  let acc = 0;
+  let center = 0;
+  for (const b of PRECIP_BUCKETS) {
+    const w = fraction[b.key];
+    if (b.key === verdict.actualKey) {
+      center = (acc + w / 2) * 100;
+      break;
+    }
+    acc += w;
+  }
+  const actualLabel = bucketOf(verdict.actualKey).label;
+  const mmTxt = actualMm >= 0.1 ? ` (${actualMm.toFixed(1)}mm)` : '';
+  const probTxt = pct(verdict.prob);
+  const phrase = verdict.hit
+    ? `그때의 우세가 그대로 맞았습니다 (${probTxt}).`
+    : verdict.prob <= 0.25
+      ? `그때 화면에선 ${probTxt}뿐이었죠 — 작은 확률이 이겼습니다.`
+      : `${probTxt}였던 '${actualLabel}'이 우세를 제쳤습니다.`;
+  container.replaceChildren(
+    head,
+    el('p', { class: 'retro__line' }, [
+      el('strong', { text: `${dayLabel(time, todayDate)} ${hourLabel(time)}` }),
+      `, 실제는 '${actualLabel}'${mmTxt}. ${phrase}`,
+    ]),
+    el('div', { class: 'retro__bar' }, [
+      el('span', { class: 'retro__segs' }, segs),
+      el('span', { class: 'retro__mark', style: `left:${center}%` }),
+    ]),
+    el('p', { class: 'retro__sub', text: '그때 이 기기에서 본 경우의 수 · 실측은 재분석 기반 근사값' }),
+  );
+}
+
 // Accessibility / transparency: the same data as a plain table.
 export function renderTable(container, { analyzed, todayDate }) {
   const head = el('tr', {}, [

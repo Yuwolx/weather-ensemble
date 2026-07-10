@@ -75,6 +75,33 @@ export async function loadEnsemble(lat, lon) {
   return parseEnsemble(await fetchEnsemble(lat, lon));
 }
 
+// What actually fell yesterday: hourly precipitation from the forecast API's
+// assimilation window (past_days). This is reanalysis-grade "실측 근사" — good
+// enough to settle "어느 시나리오가 이겼나", available without delay. Returns a
+// Map of local-ISO-hour → mm.
+export async function loadActualsYesterday(lat, lon) {
+  const p = new URLSearchParams({
+    latitude: lat.toFixed(4),
+    longitude: lon.toFixed(4),
+    hourly: 'precipitation',
+    past_days: '1',
+    forecast_days: '1',
+    timezone: 'auto',
+  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`, { signal: ctrl.signal });
+    if (!res.ok) throw new Error(`actuals ${res.status}`);
+    const json = await res.json();
+    const times = json.hourly?.time || [];
+    const mm = json.hourly?.precipitation || [];
+    return new Map(times.map((t, i) => [t, mm[i]]));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Browser geolocation, promisified. Rejects with a friendly message the UI can show.
 export function getCurrentPosition() {
   return new Promise((resolve, reject) => {

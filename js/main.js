@@ -3,9 +3,10 @@
 
 import { REGIONS } from './regions.js';
 import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS } from './config.js';
-import { loadEnsemble, getCurrentPosition, nearestRegion } from './api.js';
-import { analyzeHour, dayMood } from './stats.js';
-import { dateOf } from './format.js';
+import { loadEnsemble, loadActualsYesterday, getCurrentPosition, nearestRegion } from './api.js';
+import { analyzeHour, dayMood, pickRetroHour, retroVerdict } from './stats.js';
+import { saveDaySnapshots, getSnapshot } from './snapshots.js';
+import { dateOf, addDays } from './format.js';
 import * as ui from './ui.js';
 
 const state = {
@@ -35,6 +36,7 @@ const refs = {
   geo: $('geoBtn'),
   tableToggle: $('tableToggle'),
   tableWrap: $('tableWrap'),
+  retro: $('retro'),
 };
 
 // ---- overlay ---------------------------------------------------------------
@@ -95,6 +97,9 @@ async function selectRegion(region) {
     renderRegion();
     renderCanvas();
     hideOverlay();
+    // remember today's odds for tomorrow's 돌아보기, then settle yesterday's
+    saveDaySnapshots(region, byDay, date);
+    refreshRetro();
   } catch (err) {
     showError(err.message || '예보를 불러오지 못했습니다.', () => selectRegion(region));
   }
@@ -146,6 +151,35 @@ function renderBoard() {
     picked: state.picked,
     onPick: pickScenario,
   });
+}
+
+// 돌아보기: settle yesterday's stored odds against what actually fell.
+// Quietly optional — no snapshot or no actuals just leaves the invitation line.
+async function refreshRetro() {
+  const region = state.region;
+  const snap = getSnapshot(region, addDays(state.todayDate, -1));
+  if (!snap) {
+    ui.renderRetro(refs.retro, null);
+    return;
+  }
+  try {
+    const actuals = await loadActualsYesterday(region.lat, region.lon);
+    if (state.region !== region) return; // user moved on mid-fetch
+    const picked = pickRetroHour(snap.hours, actuals);
+    if (!picked) {
+      ui.renderRetro(refs.retro, null);
+      return;
+    }
+    ui.renderRetro(refs.retro, {
+      time: picked.time,
+      fraction: picked.snap.fraction,
+      mm: picked.mm,
+      verdict: retroVerdict(picked.snap.fraction, picked.mm, PRECIP_BUCKETS),
+      todayDate: state.todayDate,
+    });
+  } catch {
+    ui.renderRetro(refs.retro, null);
+  }
 }
 
 // Tap a scenario to highlight it (toggle). Ephemeral — just a focus, no storage.

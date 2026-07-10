@@ -14,16 +14,21 @@ export const dateOf = (iso) => iso.slice(0, 10);
 
 export const hourLabel = (iso) => `${hourOf(iso)}시`;
 
-// "오늘"/"내일"/"모레" relative to a reference ISO date (the first hour shown).
+// Shift a plain YYYY-MM-DD by whole days using local date parts
+// (toISOString would shift by the UTC offset).
+export function addDays(dateStr, delta) {
+  const d = new Date(`${dateStr}T00:00`);
+  d.setDate(d.getDate() + delta);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// "어제"/"오늘"/"내일" relative to a reference ISO date (the first hour shown).
 export function dayLabel(iso, todayDate) {
   const d = dateOf(iso);
   if (d === todayDate) return '오늘';
-  // Add one day using local date parts (toISOString would shift by the UTC offset).
-  const next = new Date(`${todayDate}T00:00`);
-  next.setDate(next.getDate() + 1);
-  const p = (n) => String(n).padStart(2, '0');
-  const nextStr = `${next.getFullYear()}-${p(next.getMonth() + 1)}-${p(next.getDate())}`;
-  if (d === nextStr) return '내일';
+  if (d === addDays(todayDate, 1)) return '내일';
+  if (d === addDays(todayDate, -1)) return '어제';
   return `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 }
 

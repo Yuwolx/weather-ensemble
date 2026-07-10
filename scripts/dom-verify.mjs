@@ -59,6 +59,10 @@ check('0% scenarios keep an honestly empty track', [...d.querySelectorAll('#boar
   const w = parseFloat(row.querySelector('.scenario__fill')?.style.width || '0');
   return !isZero || w === 0;
 }));
+check('retro shows the first-run invitation (no snapshot yet)',
+  (d.getElementById('retro')?.textContent || '').includes('기억해'));
+check('forecast snapshots saved for the visible days',
+  dom.window.localStorage.length >= 2, `${dom.window.localStorage.length} keys`);
 check('board conditions is one compact line (temp·강수·바람)',
   /기온.*강수.*바람/.test(d.querySelector('#board .board__cond')?.textContent || ''),
   d.querySelector('#board .board__cond')?.textContent);

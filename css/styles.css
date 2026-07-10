@@ -152,11 +152,11 @@ body::after {
   pointer-events: none;
 }
 :root[data-mood="rainy"] body::after {
-  background-image: linear-gradient(178deg, transparent 0%, rgba(98, 128, 168, 0.13) 45%, transparent 72%);
-  background-size: 4px 126px;
-  -webkit-mask-image: linear-gradient(to bottom, #000, transparent 72%);
-  mask-image: linear-gradient(to bottom, #000, transparent 72%);
-  animation: rainfall 9s linear infinite;
+  background-image: linear-gradient(178deg, transparent 0%, rgba(88, 120, 162, 0.22) 45%, transparent 72%);
+  background-size: 5px 150px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent 80%);
+  mask-image: linear-gradient(to bottom, #000 30%, transparent 80%);
+  animation: rainfall 8s linear infinite;
 }
 :root[data-mood="clear"] body::after {
   background: radial-gradient(56rem 36rem at 80% -10%, rgba(255, 199, 110, 0.26), transparent 70%);
@@ -692,6 +692,61 @@ body::after {
   font-variant-numeric: tabular-nums;
   font-size: 13px;
   color: var(--ink-subtle);
+}
+
+/* 돌아보기 — a quiet ledger line, not a scoreboard */
+.retro {
+  margin-top: 40px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(23, 24, 28, 0.07);
+}
+.retro__empty {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-subtle);
+  max-width: 52ch;
+}
+.retro__line {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+  max-width: 62ch;
+  text-wrap: pretty;
+}
+.retro__line strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+.retro__bar {
+  position: relative;
+  max-width: 420px;
+  margin-top: 14px;
+}
+.retro__segs {
+  display: flex;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(23, 24, 28, 0.06);
+}
+.retro__seg {
+  display: block;
+  height: 100%;
+}
+.retro__mark {
+  position: absolute;
+  top: 10px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink);
+  transform: translateX(-50%);
+}
+.retro__sub {
+  margin: 16px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-faint);
 }
 
 /* Method footer */

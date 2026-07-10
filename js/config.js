@@ -32,6 +32,9 @@ export const RAIN_THRESHOLD_MM = 0.1;
 // >= rainy → cool blue-grey air; >= unsettled → neutral mist; below → warm ivory.
 export const MOOD_THRESHOLDS = { rainy: 0.5, unsettled: 0.2 };
 
+// How many days of forecast snapshots to keep for 돌아보기 (localStorage).
+export const RETRO_KEEP_DAYS = 14;
+
 // Wind is secondary: we report the spread (median + range) rather than bucketing.
 // This threshold only flags "notably windy" hours in the plain-language read (m/s).
 export const WINDY_THRESHOLD_MS = 8;

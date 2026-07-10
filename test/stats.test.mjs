@@ -41,6 +41,58 @@ test('dayMood: no hours falls back to unsettled (neutral air)', () => {
   assert.equal(dayMood([], MOOD_THRESHOLDS), 'unsettled');
 });
 
+// Retrospect (돌아보기): pure comparison of a stored forecast snapshot against
+// what actually happened. This is the app's reason to exist — "작은 확률이
+// 이겼구나" must be computed honestly.
+import { pickRetroHour, retroVerdict } from '../js/stats.js';
+
+const snapHour = (time, dry, light, mod, heavy) => ({
+  time,
+  fraction: { dry, light, mod, heavy },
+  n: 100,
+});
+
+test('pickRetroHour: picks the hour with the most actual rain', () => {
+  const snaps = [snapHour('2026-07-09T13:00', 0.8, 0.2, 0, 0), snapHour('2026-07-09T14:00', 0.5, 0.4, 0.1, 0)];
+  const actuals = new Map([
+    ['2026-07-09T13:00', 0.4],
+    ['2026-07-09T14:00', 2.2],
+  ]);
+  const r = pickRetroHour(snaps, actuals);
+  assert.equal(r.time, '2026-07-09T14:00');
+  assert.equal(r.mm, 2.2);
+});
+
+test('pickRetroHour: dry day falls back to the hour forecast riskiest', () => {
+  const snaps = [snapHour('2026-07-09T09:00', 0.9, 0.1, 0, 0), snapHour('2026-07-09T15:00', 0.55, 0.35, 0.1, 0)];
+  const actuals = new Map([
+    ['2026-07-09T09:00', 0],
+    ['2026-07-09T15:00', 0.05],
+  ]);
+  const r = pickRetroHour(snaps, actuals);
+  assert.equal(r.time, '2026-07-09T15:00'); // highest forecast rain chance
+  assert.equal(r.mm, 0.05);
+});
+
+test('pickRetroHour: no overlapping hours returns null', () => {
+  const snaps = [snapHour('2026-07-09T09:00', 1, 0, 0, 0)];
+  assert.equal(pickRetroHour(snaps, new Map([['2026-07-09T10:00', 0]])), null);
+});
+
+test('retroVerdict: dominant scenario winning is a hit with its probability', () => {
+  const v = retroVerdict({ dry: 0.7, light: 0.2, mod: 0.1, heavy: 0 }, 0, PRECIP_BUCKETS);
+  assert.equal(v.actualKey, 'dry');
+  assert.equal(v.hit, true);
+  assert.ok(Math.abs(v.prob - 0.7) < 1e-9);
+});
+
+test('retroVerdict: a small probability winning is an upset, not a betrayal', () => {
+  const v = retroVerdict({ dry: 0.72, light: 0.2, mod: 0.08, heavy: 0 }, 1.5, PRECIP_BUCKETS);
+  assert.equal(v.actualKey, 'mod'); // 1.5mm/h = 비
+  assert.equal(v.hit, false);
+  assert.ok(Math.abs(v.prob - 0.08) < 1e-9);
+});
+
 test('classifyPrecip puts values in the right bucket (half-open [min,max))', () => {
   assert.equal(classifyPrecip(0, PRECIP_BUCKETS), 'dry');
   assert.equal(classifyPrecip(0.09, PRECIP_BUCKETS), 'dry');
