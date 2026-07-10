@@ -14,6 +14,11 @@ export function buildEnsembleUrl(lat, lon) {
     wind_speed_unit: 'ms',
     timezone: 'auto',
     forecast_days: String(FORECAST_DAYS),
+    // Yesterday rides along in the same call. Open-Meteo archives the actual
+    // short-lead member forecasts for past days (verified empirically: real
+    // spread, not assimilated truth), so 돌아보기 gets "어제의 예보 분포"
+    // even on a first visit with no local snapshot.
+    past_days: '1',
   });
   return `${ENSEMBLE_ENDPOINT}?${p.toString()}`;
 }

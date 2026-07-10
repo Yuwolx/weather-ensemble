@@ -213,15 +213,26 @@ export function renderRetro(container, data) {
     );
     return;
   }
-  const { todayDate, actual, forecast, snapHours, actualCells, settled, record } = data;
+  const { todayDate, actual, predicted, forecast, actualCells, pickCells, settled, record } = data;
   const parts = [head];
+  const predByTime = new Map((predicted?.hours || []).map((h) => [h.time, h.fraction]));
 
-  // (1) 어제를 오늘과 같은 그래프로: 그때의 경우의 수 스트립(스냅샷이 있을 때),
-  //     그 아래에 실제가 어떤 색이었는지 시간별 리본 한 줄.
-  if (snapHours) {
-    parts.push(el('p', { class: 'retro__cap', text: '어제 — 그때 화면의 경우의 수' }));
-    const cols = snapHours.map((h) => {
-      const stack = el('div', { class: 'retro__col' });
+  // (1) 어제를 오늘과 같은 그래프로: 예측했던 경우의 수 스트립, (예감 행,)
+  //     그리고 실제가 어떤 색이었는지 시간별 리본 — 전부 시간 정렬.
+  if (predicted) {
+    parts.push(
+      el('p', {
+        class: 'retro__cap retro__cap--strip',
+        text: predicted.source === 'snapshot' ? '어제 — 그때 화면의 경우의 수' : '어제 — 예보가 봤던 경우의 수',
+      }),
+    );
+    const cols = predicted.hours.map((h) => {
+      const stack = el('div', {
+        class: 'retro__col',
+        title: `${hourLabel(h.time)} — ${PRECIP_BUCKETS.filter((b) => h.fraction[b.key] > 0)
+          .map((b) => `${b.label} ${pct(h.fraction[b.key])}`)
+          .join(' · ')}`,
+      });
       for (const key of SEG_ORDER) {
         const frac = h.fraction[key];
         if (frac <= 0) continue;
@@ -231,17 +242,40 @@ export function renderRetro(container, data) {
     });
     parts.push(el('div', { class: 'retro__strip' }, cols));
   }
+  if (pickCells) {
+    parts.push(
+      el('div', { class: 'retro__ribbonrow' }, [
+        el('span', { class: 'retro__cap retro__cap--ribbon', text: '예감' }),
+        el('div', { class: 'retro__ribbon' },
+          pickCells.map((c) =>
+            el('span', { class: 'retro__cell retro__cell--pick' },
+              c.picked
+                ? el('span', {
+                    class: 'retro__pickdot',
+                    style: `background:var(--p-${c.picked})`,
+                    title: `${hourLabel(c.time)} 예감 '${bucketOf(c.picked).label}'`,
+                  })
+                : null,
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
   parts.push(
     el('div', { class: 'retro__ribbonrow' }, [
       el('span', { class: 'retro__cap retro__cap--ribbon', text: '실제' }),
       el('div', { class: 'retro__ribbon' },
-        actualCells.map((c) =>
-          el('span', {
+        actualCells.map((c) => {
+          const predFrac = predByTime.get(c.time)?.[c.key];
+          return el('span', {
             class: 'retro__cell',
             style: `background:var(--p-${c.key})`,
-            title: `${hourLabel(c.time)} ${bucketOf(c.key).label}`,
-          }),
-        ),
+            title:
+              `${hourLabel(c.time)} 실제 '${bucketOf(c.key).label}'` +
+              (predFrac != null ? ` — ${pct(predFrac)}짜리 경우` : ''),
+          });
+        }),
       ),
     ]),
   );
@@ -251,24 +285,25 @@ export function renderRetro(container, data) {
     ),
   );
 
-  // (2) 한 줄 판정
+  // (2) 판정 — 일어난 결과가 몇%짜리 경우였는지가 이 문장의 주인공
   if (forecast) {
-    const { time, fraction, verdict } = forecast;
+    const { time, verdict } = forecast;
     const actualLabel = bucketOf(verdict.actualKey).label;
     const probTxt = pct(verdict.prob);
-    const phrase = verdict.hit
-      ? `그때의 우세가 그대로 맞았습니다 (${probTxt}).`
-      : verdict.prob < 0.005
-        ? '그때 화면엔 아예 없던 경우였습니다 — 그런 날도 있습니다.'
-        : verdict.prob <= 0.25
-          ? `그때 화면에선 ${probTxt}뿐이었죠 — 작은 확률이 이겼습니다.`
-          : `${probTxt}였던 '${actualLabel}'이 우세를 제쳤습니다.`;
-    parts.push(
-      el('p', { class: 'retro__line' }, [
-        el('strong', { text: `${dayLabel(time, todayDate)} ${hourLabel(time)}` }),
-        ` '${actualLabel}' — ${phrase}`,
-      ]),
-    );
+    const big = (txt) => el('strong', { class: 'retro__pct', text: txt });
+    const line = el('p', { class: 'retro__line' }, [
+      el('strong', { text: `${dayLabel(time, todayDate)} ${hourLabel(time)}` }),
+      ` 실제 '${actualLabel}' — `,
+      verdict.hit ? big(`${probTxt}짜리 우세`) : verdict.prob < 0.005 ? big('화면에 거의 없던 경우') : big(`${probTxt}짜리 경우`),
+      verdict.hit
+        ? '가 그대로 맞았습니다.'
+        : verdict.prob < 0.005
+          ? `가 일어났습니다 (${probTxt}) — 그런 날도 있습니다.`
+          : verdict.prob <= 0.25
+            ? '가 이겼습니다 — 작은 확률의 승리.'
+            : '가 우세를 제쳤습니다.',
+    ]);
+    parts.push(line);
   } else {
     parts.push(
       el('p', { class: 'retro__line' }, [
@@ -277,7 +312,6 @@ export function renderRetro(container, data) {
           ? ` — ${hourLabel(actual.peakTime)}에 가장 세게(${actual.peakMm.toFixed(1)}mm), 하루 ${actual.totalMm.toFixed(1)}mm.`
           : ' — 비는 오지 않았습니다.',
       ]),
-      el('p', { class: 'retro__empty', text: '오늘 본 경우의 수는 기억해 뒀다가 내일 이 자리에서 대조해 드립니다.' }),
     );
   }
 
@@ -301,7 +335,14 @@ export function renderRetro(container, data) {
     );
   }
 
-  parts.push(el('p', { class: 'retro__sub', text: '실측은 재분석 기반 근사값 · 기록은 이 기기에만 저장됩니다' }));
+  parts.push(
+    el('p', {
+      class: 'retro__sub',
+      text:
+        (predicted?.source === 'api' ? '예보 분포는 Open-Meteo 보관 예보 · ' : '') +
+        '실측은 재분석 기반 근사값 · 기록은 이 기기에만 저장됩니다',
+    }),
+  );
   container.replaceChildren(...parts);
 }
 

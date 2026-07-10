@@ -15,10 +15,14 @@ Object.defineProperty(globalThis, 'localStorage', { value: dom.window.localStora
 // node's global fetch is already available to the app modules; no wrapper needed
 
 const errors = [];
-dom.window.addEventListener('error', (e) => errors.push(e.message));
-process.on('unhandledRejection', (r) => errors.push('unhandledRejection: ' + (r?.stack || r)));
+// jsdom has no canvas 2d context (needs the optional `canvas` package); rain.js
+// guards for it, so that one "Not implemented" complaint is expected here.
+const IGNORE = /HTMLCanvasElement's getContext\(\) method/;
+const pushErr = (msg) => { if (!IGNORE.test(msg)) errors.push(msg); };
+dom.window.addEventListener('error', (e) => pushErr(e.message));
+process.on('unhandledRejection', (r) => pushErr('unhandledRejection: ' + (r?.stack || r)));
 const origErr = console.error;
-console.error = (...a) => { errors.push(a.join(' ')); origErr(...a); };
+console.error = (...a) => { pushErr(a.join(' ')); origErr(...a); };
 
 await import('../js/main.js');
 

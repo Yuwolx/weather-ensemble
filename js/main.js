@@ -4,7 +4,8 @@
 import { REGIONS } from './regions.js';
 import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS } from './config.js';
 import { loadEnsemble, loadActualsYesterday, getCurrentPosition, nearestRegion } from './api.js';
-import { analyzeHour, dayMood, agreement, classifyPrecip, pickRetroHour, retroVerdict, summarizeActuals, settlePicks } from './stats.js';
+import { analyzeHour, dayMood, agreement, classifyPrecip, precipDistribution, pickRetroHour, retroVerdict, summarizeActuals, settlePicks } from './stats.js';
+import { createRain } from './rain.js';
 import { saveDaySnapshots, getSnapshot, savePick, getPicks, appendRecord, getRecord, regionKeyOf } from './snapshots.js';
 import { dateOf, addDays } from './format.js';
 import * as ui from './ui.js';
@@ -21,6 +22,7 @@ const state = {
   meta: null,
   todayDate: null,
   nowTime: null,
+  yesterdayDists: [],
 };
 
 const $ = (id) => document.getElementById(id);
@@ -76,6 +78,16 @@ async function selectRegion(region) {
       .filter((h) => h.time.slice(0, 13) >= key)
       .map((h) => analyzeHour(h, PRECIP_BUCKETS, RAIN_THRESHOLD_MM));
     if (!all.length) throw new Error('표시할 예보 시간이 없습니다.');
+
+    // yesterday's archived member forecasts ride in the same payload — kept as
+    // per-hour distributions so 돌아보기 can show "어제의 예보" on any device
+    const yDate = addDays(date, -1);
+    state.yesterdayDists = data.hours
+      .filter((h) => dateOf(h.time) === yDate)
+      .map((h) => {
+        const d = precipDistribution(h.precipMembers, PRECIP_BUCKETS);
+        return { time: h.time, fraction: d.fraction, n: d.n };
+      });
 
     const byDay = new Map();
     for (const a of all) {
@@ -149,14 +161,14 @@ function renderCanvas() {
 // Media-art rain: if the selected hour's leading scenario is rain, it rains on
 // screen — light rain falls thin and sparse, heavy rain dense and fast. Driven
 // by the hour the user is looking at, so tapping across the strip plays weather.
+const rainFx = createRain($('rain'));
 function syncRainArt() {
   const a = state.hours[state.selected];
   const lead = a ? agreement(a.dist).dominantKey : null;
-  if (lead === 'light' || lead === 'mod' || lead === 'heavy') {
-    document.documentElement.dataset.rain = lead;
-  } else {
-    delete document.documentElement.dataset.rain;
-  }
+  const raining = lead === 'light' || lead === 'mod' || lead === 'heavy';
+  if (raining) document.documentElement.dataset.rain = lead;
+  else delete document.documentElement.dataset.rain;
+  rainFx.set(raining ? lead : null);
 }
 
 function renderBoard() {
@@ -181,33 +193,44 @@ async function refreshRetro() {
     const yActuals = new Map([...actuals].filter(([t]) => dateOf(t) === yesterday));
     if (!yActuals.size) return;
 
-    // (1) what the odds said then, if this device saw them
+    // (1) yesterday's predicted distribution — the device's own snapshot if it
+    // saw one (그때 화면), else the archived forecast from the API (콜드스타트)
     const snap = getSnapshot(region, yesterday);
+    const predicted = snap
+      ? { hours: snap.hours, source: 'snapshot' }
+      : state.yesterdayDists.length
+        ? { hours: state.yesterdayDists, source: 'api' }
+        : null;
+
+    // (2) the verdict: what happened, and what odds it had been given
     let forecast = null;
-    if (snap) {
-      const picked = pickRetroHour(snap.hours, yActuals);
+    if (predicted) {
+      const picked = pickRetroHour(predicted.hours, yActuals);
       if (picked) {
         forecast = {
           time: picked.time,
-          fraction: picked.snap.fraction,
           mm: picked.mm,
           verdict: retroVerdict(picked.snap.fraction, picked.mm, PRECIP_BUCKETS),
         };
       }
     }
 
-    // (2) the user's hunches, settled once into the running record
-    const settled = settlePicks(getPicks(region, yesterday), yActuals, PRECIP_BUCKETS);
+    // (3) the user's hunches, settled once into the running record
+    const picks = getPicks(region, yesterday);
+    const settled = settlePicks(picks, yActuals, PRECIP_BUCKETS);
     const record = settled.length ? appendRecord(regionKeyOf(region), settled) : getRecord();
+
+    const actualCells = [...yActuals]
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([time, mm]) => ({ time, key: classifyPrecip(mm ?? 0, PRECIP_BUCKETS) }));
 
     ui.renderRetro(refs.retro, {
       todayDate: state.todayDate,
       actual: summarizeActuals(yActuals),
+      predicted,
       forecast,
-      snapHours: snap ? snap.hours : null,
-      actualCells: [...yActuals]
-        .sort(([a], [b]) => (a < b ? -1 : 1))
-        .map(([time, mm]) => ({ time, key: classifyPrecip(mm ?? 0, PRECIP_BUCKETS) })),
+      actualCells,
+      pickCells: Object.keys(picks).length ? actualCells.map(({ time }) => ({ time, picked: picks[time] || null })) : null,
       settled,
       record,
     });
