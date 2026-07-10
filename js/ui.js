@@ -213,7 +213,7 @@ export function renderRetro(container, data) {
     );
     return;
   }
-  const { todayDate, actual, predicted, forecast, actualCells, pickCells, settled, record } = data;
+  const { todayDate, actual, predicted, score, forecast, actualCells, pickCells, settled, record } = data;
   const parts = [head];
   const predByTime = new Map((predicted?.hours || []).map((h) => [h.time, h.fraction]));
 
@@ -273,7 +273,7 @@ export function renderRetro(container, data) {
             style: `background:var(--p-${c.key})`,
             title:
               `${hourLabel(c.time)} 실제 '${bucketOf(c.key).label}'` +
-              (predFrac != null ? ` — ${pct(predFrac)}짜리 경우` : ''),
+              (predFrac != null ? ` — 그때 확률 ${pct(predFrac)}` : ''),
           });
         }),
       ),
@@ -285,25 +285,28 @@ export function renderRetro(container, data) {
     ),
   );
 
-  // (2) 판정 — 일어난 결과가 몇%짜리 경우였는지가 이 문장의 주인공
+  // (2) 판정 — 일어난 결과에 그때 얼마의 확률이 걸려 있었는지가 이 문장의 주인공
   if (forecast) {
     const { time, verdict } = forecast;
     const actualLabel = bucketOf(verdict.actualKey).label;
     const probTxt = pct(verdict.prob);
     const big = (txt) => el('strong', { class: 'retro__pct', text: txt });
-    const line = el('p', { class: 'retro__line' }, [
-      el('strong', { text: `${dayLabel(time, todayDate)} ${hourLabel(time)}` }),
-      ` 실제 '${actualLabel}' — `,
-      verdict.hit ? big(`${probTxt}짜리 우세`) : verdict.prob < 0.005 ? big('화면에 거의 없던 경우') : big(`${probTxt}짜리 경우`),
-      verdict.hit
-        ? '가 그대로 맞았습니다.'
-        : verdict.prob < 0.005
-          ? `가 일어났습니다 (${probTxt}) — 그런 날도 있습니다.`
-          : verdict.prob <= 0.25
-            ? '가 이겼습니다 — 작은 확률의 승리.'
-            : '가 우세를 제쳤습니다.',
-    ]);
-    parts.push(line);
+    const tail = verdict.hit
+      ? ' 우세가 그대로 맞았습니다.'
+      : verdict.prob < 0.005
+        ? ' 화면에 거의 없던 경우가 일어났습니다 — 그런 날도 있습니다.'
+        : verdict.prob <= 0.25
+          ? ' 작은 확률이 이겼습니다.'
+          : ' 우세를 제친 승리였습니다.';
+    parts.push(
+      el('p', { class: 'retro__line' }, [
+        el('strong', { text: `${dayLabel(time, todayDate)} ${hourLabel(time)}` }),
+        ` 실제 '${actualLabel}' — 그때 이 경우의 확률은 `,
+        big(probTxt),
+        '.',
+        tail,
+      ]),
+    );
   } else {
     parts.push(
       el('p', { class: 'retro__line' }, [
@@ -311,6 +314,20 @@ export function renderRetro(container, data) {
         actual.rained
           ? ` — ${hourLabel(actual.peakTime)}에 가장 세게(${actual.peakMm.toFixed(1)}mm), 하루 ${actual.totalMm.toFixed(1)}mm.`
           : ' — 비는 오지 않았습니다.',
+      ]),
+    );
+  }
+
+  // (2.5) 어제의 예보 성적 — 우세 적중률 + 실제 일어난 일에 줬던 평균 확률
+  if (score) {
+    parts.push(
+      el('p', { class: 'retro__line retro__score' }, [
+        el('strong', { text: '어제의 예보 성적' }),
+        ` — ${score.n}시간 중 ${score.hits}시간 우세 적중(`,
+        el('strong', { class: 'retro__pct', text: pct(score.hitRate) }),
+        `), 실제 일어난 날씨에 평균 `,
+        el('strong', { class: 'retro__pct', text: pct(score.meanProb) }),
+        `의 확률을 주고 있었습니다.`,
       ]),
     );
   }

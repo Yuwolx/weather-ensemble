@@ -149,6 +149,35 @@ export function settlePicks(picks, actualsByTime, buckets) {
   return out;
 }
 
+// The day's report card for the ensemble itself: across all hours we can check,
+// how often did the leading scenario actually happen (hitRate), and how much
+// probability had been given to what really occurred (meanProb). meanProb is
+// the more honest of the two — a forecast can "miss" while having warned well.
+export function forecastScore(predHours, actualsByTime, buckets) {
+  let n = 0;
+  let hits = 0;
+  let probSum = 0;
+  for (const h of predHours) {
+    if (!actualsByTime.has(h.time)) continue;
+    const mm = actualsByTime.get(h.time);
+    if (!isNum(mm)) continue;
+    const actualKey = classifyPrecip(mm, buckets);
+    let domKey = null;
+    let max = -1;
+    for (const b of buckets) {
+      if (h.fraction[b.key] > max) {
+        max = h.fraction[b.key];
+        domKey = b.key;
+      }
+    }
+    n += 1;
+    if (domKey === actualKey) hits += 1;
+    probSum += h.fraction[actualKey];
+  }
+  if (!n) return null;
+  return { n, hits, hitRate: hits / n, meanProb: probSum / n };
+}
+
 // The honest verdict: which scenario actually happened, whether it was the
 // forecast favorite, and what probability the winner had been given. hit=false
 // with a small prob is the whole point — 작은 확률의 승리이지 예보의 배신이 아니다.

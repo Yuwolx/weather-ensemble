@@ -4,7 +4,7 @@
 import { REGIONS } from './regions.js';
 import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS } from './config.js';
 import { loadEnsemble, loadActualsYesterday, getCurrentPosition, nearestRegion } from './api.js';
-import { analyzeHour, dayMood, agreement, classifyPrecip, precipDistribution, pickRetroHour, retroVerdict, summarizeActuals, settlePicks } from './stats.js';
+import { analyzeHour, dayMood, agreement, classifyPrecip, precipDistribution, pickRetroHour, retroVerdict, summarizeActuals, settlePicks, forecastScore } from './stats.js';
 import { createRain } from './rain.js';
 import { saveDaySnapshots, getSnapshot, savePick, getPicks, appendRecord, getRecord, regionKeyOf } from './snapshots.js';
 import { dateOf, addDays } from './format.js';
@@ -228,6 +228,7 @@ async function refreshRetro() {
       todayDate: state.todayDate,
       actual: summarizeActuals(yActuals),
       predicted,
+      score: predicted ? forecastScore(predicted.hours, yActuals, PRECIP_BUCKETS) : null,
       forecast,
       actualCells,
       pickCells: Object.keys(picks).length ? actualCells.map(({ time }) => ({ time, picked: picks[time] || null })) : null,

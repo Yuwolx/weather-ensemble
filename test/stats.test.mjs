@@ -86,7 +86,29 @@ test('retroVerdict: dominant scenario winning is a hit with its probability', ()
   assert.ok(Math.abs(v.prob - 0.7) < 1e-9);
 });
 
-import { summarizeActuals, settlePicks } from '../js/stats.js';
+import { summarizeActuals, settlePicks, forecastScore } from '../js/stats.js';
+
+test('forecastScore: daily hit rate of the dominant scenario + mean prob given to reality', () => {
+  const hours = [
+    snapHour('2026-07-09T10:00', 0.8, 0.2, 0, 0), // dominant dry, actual dry → hit, prob .8
+    snapHour('2026-07-09T11:00', 0.3, 0.5, 0.2, 0), // dominant light, actual mod → miss, prob .2
+    snapHour('2026-07-09T12:00', 0.1, 0.3, 0.6, 0), // dominant mod, actual mod → hit, prob .6
+  ];
+  const actuals = new Map([
+    ['2026-07-09T10:00', 0],
+    ['2026-07-09T11:00', 2.0],
+    ['2026-07-09T12:00', 1.5],
+  ]);
+  const s = forecastScore(hours, actuals, PRECIP_BUCKETS);
+  assert.equal(s.n, 3);
+  assert.equal(s.hits, 2);
+  assert.ok(Math.abs(s.hitRate - 2 / 3) < 1e-9);
+  assert.ok(Math.abs(s.meanProb - (0.8 + 0.2 + 0.6) / 3) < 1e-9);
+});
+
+test('forecastScore: no overlap returns null', () => {
+  assert.equal(forecastScore([snapHour('2026-07-09T10:00', 1, 0, 0, 0)], new Map(), PRECIP_BUCKETS), null);
+});
 
 test('summarizeActuals: totals the day and finds the wettest hour', () => {
   const actuals = new Map([
