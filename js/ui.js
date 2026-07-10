@@ -213,35 +213,47 @@ export function renderRetro(container, data) {
     );
     return;
   }
-  const { todayDate, actual, forecast, settled, record } = data;
+  const { todayDate, actual, forecast, snapHours, actualCells, settled, record } = data;
   const parts = [head];
 
-  // (1) 어제 실제
+  // (1) 어제를 오늘과 같은 그래프로: 그때의 경우의 수 스트립(스냅샷이 있을 때),
+  //     그 아래에 실제가 어떤 색이었는지 시간별 리본 한 줄.
+  if (snapHours) {
+    parts.push(el('p', { class: 'retro__cap', text: '어제 — 그때 화면의 경우의 수' }));
+    const cols = snapHours.map((h) => {
+      const stack = el('div', { class: 'retro__col' });
+      for (const key of SEG_ORDER) {
+        const frac = h.fraction[key];
+        if (frac <= 0) continue;
+        stack.appendChild(el('div', { class: `col__seg col__seg--${key}`, style: `height:${frac * 100}%` }));
+      }
+      return stack;
+    });
+    parts.push(el('div', { class: 'retro__strip' }, cols));
+  }
   parts.push(
-    el('p', { class: 'retro__line' }, [
-      el('strong', { text: '어제 실제' }),
-      actual.rained
-        ? ` — ${hourLabel(actual.peakTime)}에 가장 세게(${actual.peakMm.toFixed(1)}mm), 하루 ${actual.totalMm.toFixed(1)}mm.`
-        : ' — 비는 오지 않았습니다.',
+    el('div', { class: 'retro__ribbonrow' }, [
+      el('span', { class: 'retro__cap retro__cap--ribbon', text: '실제' }),
+      el('div', { class: 'retro__ribbon' },
+        actualCells.map((c) =>
+          el('span', {
+            class: 'retro__cell',
+            style: `background:var(--p-${c.key})`,
+            title: `${hourLabel(c.time)} ${bucketOf(c.key).label}`,
+          }),
+        ),
+      ),
     ]),
   );
+  parts.push(
+    el('div', { class: 'retro__ticks', 'aria-hidden': 'true' },
+      actualCells.map((c, i) => el('span', { text: i % 6 === 0 ? `${hourOf(c.time)}시` : '' })),
+    ),
+  );
 
-  // (2) 그때의 경우의 수 (스냅샷이 있을 때)
+  // (2) 한 줄 판정
   if (forecast) {
     const { time, fraction, verdict } = forecast;
-    const segs = PRECIP_BUCKETS.filter((b) => fraction[b.key] > 0).map((b) =>
-      el('span', { class: 'retro__seg', style: `width:${fraction[b.key] * 100}%;background:var(--p-${b.key})` }),
-    );
-    let acc = 0;
-    let center = 0;
-    for (const b of PRECIP_BUCKETS) {
-      const w = fraction[b.key];
-      if (b.key === verdict.actualKey) {
-        center = (acc + w / 2) * 100;
-        break;
-      }
-      acc += w;
-    }
     const actualLabel = bucketOf(verdict.actualKey).label;
     const probTxt = pct(verdict.prob);
     const phrase = verdict.hit
@@ -256,14 +268,16 @@ export function renderRetro(container, data) {
         el('strong', { text: `${dayLabel(time, todayDate)} ${hourLabel(time)}` }),
         ` '${actualLabel}' — ${phrase}`,
       ]),
-      el('div', { class: 'retro__bar' }, [
-        el('span', { class: 'retro__segs' }, segs),
-        el('span', { class: 'retro__mark', style: `left:${center}%` }),
-      ]),
     );
   } else {
     parts.push(
-      el('p', { class: 'retro__empty', text: '오늘 본 경우의 수는 기억해 뒀다가 내일 대조해 드립니다.' }),
+      el('p', { class: 'retro__line' }, [
+        el('strong', { text: '어제 실제' }),
+        actual.rained
+          ? ` — ${hourLabel(actual.peakTime)}에 가장 세게(${actual.peakMm.toFixed(1)}mm), 하루 ${actual.totalMm.toFixed(1)}mm.`
+          : ' — 비는 오지 않았습니다.',
+      ]),
+      el('p', { class: 'retro__empty', text: '오늘 본 경우의 수는 기억해 뒀다가 내일 이 자리에서 대조해 드립니다.' }),
     );
   }
 

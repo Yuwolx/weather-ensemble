@@ -4,7 +4,7 @@
 import { REGIONS } from './regions.js';
 import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS } from './config.js';
 import { loadEnsemble, loadActualsYesterday, getCurrentPosition, nearestRegion } from './api.js';
-import { analyzeHour, dayMood, agreement, pickRetroHour, retroVerdict, summarizeActuals, settlePicks } from './stats.js';
+import { analyzeHour, dayMood, agreement, classifyPrecip, pickRetroHour, retroVerdict, summarizeActuals, settlePicks } from './stats.js';
 import { saveDaySnapshots, getSnapshot, savePick, getPicks, appendRecord, getRecord, regionKeyOf } from './snapshots.js';
 import { dateOf, addDays } from './format.js';
 import * as ui from './ui.js';
@@ -204,6 +204,10 @@ async function refreshRetro() {
       todayDate: state.todayDate,
       actual: summarizeActuals(yActuals),
       forecast,
+      snapHours: snap ? snap.hours : null,
+      actualCells: [...yActuals]
+        .sort(([a], [b]) => (a < b ? -1 : 1))
+        .map(([time, mm]) => ({ time, key: classifyPrecip(mm ?? 0, PRECIP_BUCKETS) })),
       settled,
       record,
     });
