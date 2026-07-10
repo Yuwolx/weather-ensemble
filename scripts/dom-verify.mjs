@@ -86,7 +86,7 @@ check('table renders rows on toggle', d.querySelectorAll('#tableWrap table.data 
 
 console.log('\n' + report.join('\n'));
 console.log(`\n지역: ${txt('#vRegion')}`);
-console.log(`판정: ${txt('#vLine')}`);
-console.log(`상세(${txt('#detail h3')}): 비확률 ${txt('#detail .detail__prob')} · 바람 ${txt('#detail .wind__val')}m/s`);
+console.log(`보드: ${txt('#board .board__when')} — 우세 ${txt('#board .scenario.is-lead .scenario__label')} ${txt('#board .scenario.is-lead .scenario__pct')}`);
+console.log(`조건: ${txt('#board .board__cond')}`);
 const fails = report.filter((r) => r.startsWith('FAIL'));
 process.exit(fails.length ? 1 : 0);

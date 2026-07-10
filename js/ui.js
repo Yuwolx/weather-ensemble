@@ -40,34 +40,6 @@ export function renderFavorites(container, favs, activeName, onSelect) {
   );
 }
 
-export function renderLegend(container) {
-  container.replaceChildren(
-    ...PRECIP_BUCKETS.map((b) =>
-      el('li', {}, [
-        el('span', { class: 'swatch', style: `background:var(--p-${b.key})` }),
-        b.label,
-      ]),
-    ),
-  );
-}
-
-const TONE_VAR = { dry: 'var(--tone-dry)', maybe: 'var(--tone-maybe)', wet: 'var(--tone-wet)' };
-
-// The rail readout: the plain-language line + current conditions. No single
-// headline number — the scenario board carries the probabilities. Tone drives accent.
-export function renderHero(refs, { region, updated, tone, meta, line }) {
-  document.documentElement.style.setProperty('--tone', TONE_VAR[tone]);
-  refs.region.textContent = region;
-  refs.updated.textContent = updated;
-  refs.meta.textContent = meta;
-  refs.line.textContent = line;
-}
-
-// One-line digest for the active day — the gist without reading the strip.
-export function renderDigest(node, text) {
-  node.textContent = text;
-}
-
 // Day tabs (오늘 / 내일) — the segmented control that makes the canvas operable.
 export function renderDayTabs(container, { days, activeDate, todayDate, onSelect }) {
   container.replaceChildren(
@@ -134,48 +106,6 @@ export function renderStrip(refs, { analyzed, todayDate, nowTime, selectedIndex,
       return el('span', { class: cls.join(' '), text: labeled ? (isNewDay ? `${h}시` : `${h}`) : '' });
     }),
   );
-}
-
-// Temperature as a continuous band (p10–p90 area) with a median line, aligned to
-// the precip strip's hour centers. A filled band reads fuller than sparse bars and
-// makes the day's warm/cool arc legible in far less height.
-export function renderTempArea(refs, { hours }) {
-  const p10s = hours.map((h) => h.temp.p10).filter((v) => v != null);
-  const p90s = hours.map((h) => h.temp.p90).filter((v) => v != null);
-  if (!p10s.length) {
-    refs.axis.replaceChildren();
-    refs.row.innerHTML = '';
-    return;
-  }
-  const pad = 1;
-  const lo = Math.min(...p10s) - pad;
-  const hi = Math.max(...p90s) + pad;
-  const span = hi - lo || 1;
-  const n = hours.length;
-  const x = (i) => (((i + 0.5) / n) * 100).toFixed(2);
-  const y = (v) => ((1 - (v - lo) / span) * 100).toFixed(2);
-
-  const top = hours.map((a, i) => `${x(i)},${y(a.temp.p90)}`);
-  const bottom = hours.map((a, i) => `${x(i)},${y(a.temp.p10)}`).reverse();
-  const med = hours.map((a, i) => `${x(i)},${y(a.temp.median)}`).join(' ');
-
-  refs.axis.replaceChildren(
-    el('span', { style: 'top:8%', text: `${Math.round(hi)}°` }),
-    el('span', { style: 'top:92%', text: `${Math.round(lo)}°` }),
-  );
-  refs.row.innerHTML =
-    `<svg class="tempsvg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">` +
-    `<polygon class="tempsvg__band" points="${[...top, ...bottom].join(' ')}"/>` +
-    `<polyline class="tempsvg__line" points="${med}" fill="none" vector-effect="non-scaling-stroke"/>` +
-    `</svg>`;
-}
-
-function readout(label, value, sub) {
-  return el('div', { class: 'ro' }, [
-    el('div', { class: 'ro__label', text: label }),
-    el('div', { class: 'ro__val num', text: value }),
-    sub ? el('div', { class: 'ro__sub', text: sub }) : null,
-  ]);
 }
 
 // The hero board: the selected hour's competing scenarios, each a big row you can

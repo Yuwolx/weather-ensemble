@@ -5,7 +5,7 @@ import { REGIONS } from './regions.js';
 import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM } from './config.js';
 import { loadEnsemble, getCurrentPosition, nearestRegion } from './api.js';
 import { analyzeHour } from './stats.js';
-import { pct, mm, ms, deg, dateOf, hourOf } from './format.js';
+import { dateOf } from './format.js';
 import * as ui from './ui.js';
 
 const state = {

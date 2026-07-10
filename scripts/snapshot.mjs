@@ -37,4 +37,5 @@ ${body}`;
 
 writeFileSync(new URL('../preview.html', import.meta.url), out, 'utf-8');
 console.log('wrote preview.html  (', out.length, 'bytes )');
-console.log('verdict:', d.querySelector('#vLine').textContent.trim());
+const lead = d.querySelector('#board .scenario.is-lead');
+console.log('lead scenario:', lead ? lead.textContent.trim() : '(none)');
