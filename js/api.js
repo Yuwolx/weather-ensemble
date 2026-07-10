@@ -1,7 +1,7 @@
 // Data access: talk to Open-Meteo's ensemble API and reshape its very wide response
 // into something the stats layer can consume. Also owns geolocation. No DOM here.
 
-import { MODELS, FORECAST_DAYS, ENSEMBLE_ENDPOINT } from './config.js';
+import { MODELS, FORECAST_DAYS, ENSEMBLE_ENDPOINT, KMA_MODEL, FORECAST_ENDPOINT } from './config.js';
 
 // Build the request. One call returns every member of every model as its own
 // hourly series, e.g. hourly["precipitation_member07_ecmwf_ifs025"].
@@ -78,6 +78,32 @@ export function parseEnsemble(json) {
 
 export async function loadEnsemble(lat, lon) {
   return parseEnsemble(await fetchEnsemble(lat, lon));
+}
+
+// 기상청 KIM 수치모델의 시간별 강수 — the Korean baseline for the scenario
+// board. Deterministic single run → Map of local-ISO-hour → mm. Callers treat
+// failure as "marker simply absent".
+export async function loadKma(lat, lon) {
+  const p = new URLSearchParams({
+    latitude: lat.toFixed(4),
+    longitude: lon.toFixed(4),
+    hourly: 'precipitation',
+    models: KMA_MODEL,
+    forecast_days: String(FORECAST_DAYS),
+    timezone: 'auto',
+  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const res = await fetch(`${FORECAST_ENDPOINT}?${p}`, { signal: ctrl.signal });
+    if (!res.ok) throw new Error(`kma ${res.status}`);
+    const json = await res.json();
+    const times = json.hourly?.time || [];
+    const mm = json.hourly?.precipitation || [];
+    return new Map(times.map((t, i) => [t, mm[i]]));
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // What actually fell yesterday: hourly precipitation from the forecast API's

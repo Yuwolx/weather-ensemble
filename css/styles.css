@@ -643,11 +643,24 @@ body::after {
 .scenario:hover {
   background: rgba(255, 255, 255, 0.45);
 }
+.scenario__labelcell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 .scenario__label {
   font-size: 14.5px;
   font-weight: 500;
   color: var(--ink-subtle);
   letter-spacing: -0.005em;
+}
+/* the Korean baseline: which scenario the KMA numerical model sits on */
+.scenario__kma {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--p-mod);
+  white-space: nowrap;
 }
 .scenario.is-lead .scenario__label {
   color: var(--ink);

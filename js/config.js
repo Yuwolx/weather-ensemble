@@ -28,6 +28,14 @@ export const PRECIP_BUCKETS = [
 // Any member with >= this much precip counts as "rain" for the headline probability.
 export const RAIN_THRESHOLD_MM = 0.1;
 
+// 기상청(KMA) KIM 수치모델 — the Korean baseline, fetched from Open-Meteo's
+// forecast API (deterministic, not ensemble members). Shown as a marker on the
+// scenario board: "기상청 모델은 이 시각을 어느 시나리오로 보나". Honest label:
+// this is the numerical model's raw output, NOT the KMA official announced
+// forecast (그건 예보관 판단이 들어간 별도 산출물).
+export const KMA_MODEL = 'kma_seamless';
+export const FORECAST_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
+
 // Day-mood cutoffs for the sky wash (mean of hourly rain probabilities).
 // >= rainy → cool blue-grey air; >= unsettled → neutral mist; below → warm ivory.
 export const MOOD_THRESHOLDS = { rainy: 0.5, unsettled: 0.2 };

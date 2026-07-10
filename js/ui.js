@@ -124,7 +124,7 @@ export function renderStrip(refs, { analyzed, todayDate, nowTime, selectedIndex,
 // The hero board: the selected hour's competing scenarios, each a big row you can
 // tap to highlight. The leading scenario is emphasized but alternatives are never
 // hidden — this is the protagonist, in place of a single collapsed probability.
-export function renderBoard(container, { analyzedHour, todayDate, picked, onPick }) {
+export function renderBoard(container, { analyzedHour, todayDate, picked, kmaKey, onPick }) {
   const a = analyzedHour;
   const leadKey = agreement(a.dist).dominantKey;
 
@@ -140,7 +140,12 @@ export function renderBoard(container, { analyzedHour, todayDate, picked, onPick
       'aria-pressed': String(isPicked),
       onclick: () => onPick(b.key),
     }, [
-      el('span', { class: 'scenario__label', text: b.label }),
+      el('span', { class: 'scenario__labelcell' }, [
+        el('span', { class: 'scenario__label', text: b.label }),
+        b.key === kmaKey
+          ? el('span', { class: 'scenario__kma', title: '기상청 KIM 수치모델이 이 시각에 예상한 시나리오', text: '기상청 모델' })
+          : null,
+      ]),
       el('span', { class: 'scenario__track' }, [
         // 0% stays an honestly empty track; tiny-but-real fractions keep a sliver
         el('span', { class: 'scenario__fill', style: `width:${frac > 0 ? Math.max(frac * 100, 1.5) : 0}%;background:var(--p-${b.key})` }),

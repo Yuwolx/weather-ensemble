@@ -3,7 +3,7 @@
 
 import { REGIONS } from './regions.js';
 import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS } from './config.js';
-import { loadEnsemble, loadActualsYesterday, getCurrentPosition, nearestRegion } from './api.js';
+import { loadEnsemble, loadActualsYesterday, loadKma, getCurrentPosition, nearestRegion } from './api.js';
 import { analyzeHour, dayMood, agreement, classifyPrecip, precipDistribution, pickRetroHour, retroVerdict, summarizeActuals, settlePicks, forecastScore } from './stats.js';
 import { createRain } from './rain.js';
 import { saveDaySnapshots, getSnapshot, savePick, getPicks, appendRecord, getRecord, regionKeyOf } from './snapshots.js';
@@ -23,6 +23,7 @@ const state = {
   todayDate: null,
   nowTime: null,
   yesterdayDists: [],
+  kma: null, // Map time→mm from the 기상청 KIM model (marker on the board)
 };
 
 const $ = (id) => document.getElementById(id);
@@ -110,6 +111,16 @@ async function selectRegion(region) {
     // remember today's odds for tomorrow's 돌아보기, then settle yesterday's
     saveDaySnapshots(region, byDay, date);
     refreshRetro();
+
+    // 기상청 모델 marker loads after first paint; absence is fine
+    state.kma = null;
+    loadKma(region.lat, region.lon)
+      .then((map) => {
+        if (state.region !== region) return;
+        state.kma = map;
+        renderBoard();
+      })
+      .catch(() => {});
   } catch (err) {
     showError(err.message || '예보를 불러오지 못했습니다.', () => selectRegion(region));
   }
@@ -172,10 +183,13 @@ function syncRainArt() {
 }
 
 function renderBoard() {
+  const a = state.hours[state.selected];
+  const kmaMm = state.kma?.get(a?.time);
   ui.renderBoard(refs.board, {
-    analyzedHour: state.hours[state.selected],
+    analyzedHour: a,
     todayDate: state.todayDate,
     picked: state.picked,
+    kmaKey: kmaMm != null ? classifyPrecip(kmaMm, PRECIP_BUCKETS) : null,
     onPick: pickScenario,
   });
 }
