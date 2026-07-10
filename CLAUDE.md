@@ -34,10 +34,12 @@
 
 ## 검증 방법 (이 환경 특수사항)
 
-- 사무실 PC에서는 **dev-browser 실행이 차단됨**(V3 백신 추정, .exe 스폰 Access denied).
-  그래서 브라우저 대신 `scripts/dom-verify.mjs`(jsdom + 실데이터)로 렌더 경로를 검증했다.
-- **맥에서는 dev-browser가 될 가능성이 높다.** 되면 실제 브라우저 스크린샷으로 UX 검증할 것
-  (유저 성향이 "UX/UI 치밀한 검증"이라 이 단계 생략 금지 — claude-toolkit CLAUDE.md 규칙).
+- 사무실 PC의 dev-browser: 과거엔 전면 차단(V3 백신, .exe 스폰 Access denied)이었으나
+  **2026-07-10 현재 동작함.** 단 간헐적으로 spawn EPERM이 나는데 **몇 초 후 재시도하면 성공**.
+  headless로 데스크톱(1280×800)·폰(390×844) 스크린샷 + 탭/시나리오 클릭까지 실검증 완료.
+- 빠른 회귀엔 여전히 `scripts/dom-verify.mjs`(jsdom + 실데이터)가 1차 관문.
+- 실브라우저 스크린샷 UX 검증은 렌더/디자인 변경 시 생략 금지
+  (유저 성향이 "UX/UI 치밀한 검증" — claude-toolkit CLAUDE.md 규칙).
 
 ## 현재 상태 ("대폭 단순화" 커밋 2d3718d 이후 기준)
 
