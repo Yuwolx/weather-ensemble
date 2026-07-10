@@ -40,18 +40,11 @@
   --brand: #5e6ad2;
   --brand-soft: rgba(94, 106, 210, 0.09);
 
-  --p-dry: #dce0e5;
+  --p-dry: #aeb7c2; /* must read against both white and the #eef0f3 track */
+  --track: #eef0f3;
   --p-light: #6fa8e0;
   --p-mod: #2f7fe0;
   --p-heavy: #143a86;
-
-  --tone-dry: #199e70;
-  --tone-maybe: #b8791a;
-  --tone-wet: #2f7fe0;
-  --wind: #199e70;
-
-  --temp-warm: #e07b39; /* temperature band — warm, distinct from precip blue */
-  --temp-band: rgba(224, 123, 57, 0.22);
 
   /* sky wash — neutral mist until data says otherwise */
   --air: #f9fafb;
@@ -60,22 +53,20 @@
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-
-  --rail-w: 340px;
 }
 
 /* the day's air: data-mood is set by main.js from the active day's forecast */
 :root[data-mood="clear"] {
-  --air: #fdf9f1;
-  --air-deep: #fbf4e8;
+  --air: #fbf3e3;
+  --air-deep: #f7ead1;
 }
 :root[data-mood="unsettled"] {
-  --air: #f9fafb;
-  --air-deep: #f4f5f7;
+  --air: #f1f3f6;
+  --air-deep: #e9ecf1;
 }
 :root[data-mood="rainy"] {
-  --air: #f3f7fb;
-  --air-deep: #ebf1f8;
+  --air: #e9f0f8;
+  --air-deep: #dde8f4;
 }
 :root {
   transition: --air 0.9s ease, --air-deep 0.9s ease;
@@ -99,9 +90,9 @@ body {
 }
 body {
   margin: 0;
-  /* the sky sits at the top of the page and dissolves into white — from afar
-     this is still a white app; up close the day has a temperature */
-  background: linear-gradient(to bottom, var(--air-deep) 0, var(--air) 240px, var(--surface) 620px)
+  /* one sheet of sky: the day's air fills the page and settles into white
+     toward the ground — the data decides the weather of the screen itself */
+  background: linear-gradient(to bottom, var(--air-deep) 0, var(--air) 46%, var(--surface) 100%)
     no-repeat var(--surface);
   color: var(--ink);
   font-family: var(--sans);
@@ -109,10 +100,6 @@ body {
   line-height: 1.5;
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
-}
-.rail,
-.canvas {
-  min-width: 0; /* flex children must be allowed to shrink below content width */
 }
 
 .num,
@@ -135,27 +122,30 @@ body {
   border-radius: 3px;
 }
 
-/* ============================================================ App shell */
-.app {
-  display: flex;
-  align-items: stretch;
+/* ============================================================ Page = sky */
+.page {
   min-height: 100vh;
-}
-
-/* -------------------------------------------------------- Control rail */
-.rail {
-  width: var(--rail-w);
-  flex: none;
-  border-right: 1px solid var(--hairline);
-  padding: 26px 26px 30px;
-  position: sticky;
-  top: 0;
-  align-self: flex-start;
-  height: 100vh;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+}
+
+/* --------------------------------------------------------------- Top bar */
+.top {
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 18px 24px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.top__loc {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .brand {
   display: flex;
@@ -179,17 +169,12 @@ body {
   color: var(--ink-subtle);
 }
 
-.loc {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 .loc__name {
-  margin: 2px 0 4px;
-  font-size: 27px;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
 }
 .favs {
   display: flex;
@@ -211,7 +196,7 @@ body {
 }
 .chip:hover {
   color: var(--ink);
-  background: var(--hairline);
+  background: rgba(23, 24, 28, 0.06);
 }
 .chip[aria-pressed="true"] {
   color: var(--brand);
@@ -222,32 +207,33 @@ body {
 }
 .search__icon {
   position: absolute;
-  left: 2px;
+  left: 11px;
   top: 50%;
   transform: translateY(-50%);
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   color: var(--ink-faint);
   pointer-events: none;
 }
 .search__input {
-  width: 100%;
+  width: 150px;
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--ink);
-  background: none;
-  border: none;
-  border-bottom: 1px solid var(--hairline-strong);
-  border-radius: 0;
-  padding: 7px 4px 7px 24px;
-  transition: border-color 0.15s;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(23, 24, 28, 0.08);
+  border-radius: 999px;
+  padding: 7px 14px 7px 31px;
+  transition: border-color 0.15s, background 0.15s, width 0.25s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .search__input::placeholder {
   color: var(--ink-faint);
 }
 .search__input:focus {
   outline: none;
-  border-bottom-color: var(--brand);
+  background: #fff;
+  border-color: rgba(23, 24, 28, 0.18);
+  width: 200px;
 }
 .suggest {
   position: absolute;
@@ -288,91 +274,53 @@ body {
   font-size: 13px;
 }
 .geo {
-  align-self: flex-start;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--sans);
-  font-size: 13px;
-  font-weight: 500;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
   color: var(--ink-muted);
-  background: none;
-  border: none;
-  padding: 6px 8px 6px 2px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(23, 24, 28, 0.08);
+  border-radius: 50%;
+  padding: 0;
   cursor: pointer;
-  border-radius: 6px;
-  transition: color 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 .geo:hover {
-  color: var(--brand);
+  color: var(--ink);
+  background: #fff;
 }
 .geo svg {
   width: 15px;
   height: 15px;
 }
 
-/* plain read + current conditions */
-.now {
-  border-top: 1px solid var(--hairline);
-  padding-top: 18px;
-}
-.live {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--ink-subtle);
-  margin-bottom: 10px;
-}
-.live__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--tone-dry);
-  box-shadow: 0 0 0 0 rgba(25, 158, 112, 0.5);
-  animation: pulse 2.4s ease-out infinite;
-}
-.now__line {
-  margin: 0;
-  font-size: 14.5px;
-  line-height: 1.5;
-  color: var(--ink);
-  font-weight: 500;
-  text-wrap: pretty;
-}
-.now__meta {
-  margin: 10px 0 0;
-  font-family: var(--mono);
-  font-size: 12.5px;
-  color: var(--ink-subtle);
-}
-
-/* ---------------------------------------------------- Instrument canvas */
-.canvas {
-  flex: 1;
-  min-width: 0;
-  padding: 20px 34px 40px;
+/* ------------------------------------------------------- Sheet (content) */
+.sheet {
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 30px 24px 48px;
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
-.canvas__head {
+.sheet__head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 14px;
+  gap: 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
 }
-.canvas__hint {
-  margin: 7px 0 0;
-  font-size: 13px;
-  color: var(--ink-faint);
-}
+/* Day tabs — a soft segmented pill floating on the sky */
 .daytabs {
   display: flex;
-  gap: 2px;
+  gap: 3px;
   flex: none;
+  background: rgba(23, 24, 28, 0.055);
+  border-radius: 999px;
+  padding: 3px;
 }
 .daytab {
   font-family: var(--sans);
@@ -381,10 +329,10 @@ body {
   color: var(--ink-subtle);
   background: none;
   border: none;
-  padding: 7px 14px 9px;
+  padding: 6px 18px;
+  border-radius: 999px;
   cursor: pointer;
-  position: relative;
-  transition: color 0.15s;
+  transition: color 0.2s, background 0.2s;
 }
 .daytab:hover {
   color: var(--ink-muted);
@@ -392,47 +340,8 @@ body {
 .daytab[aria-selected="true"] {
   color: var(--ink);
   font-weight: 600;
-}
-.daytab[aria-selected="true"]::after {
-  content: "";
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 0;
-  height: 2px;
-  background: var(--brand);
-  border-radius: 2px;
-}
-
-/* Daily digest — the gist of the active day */
-.digest {
-  margin: 0 0 12px;
-  font-size: 13.5px;
-  color: var(--ink-muted);
-  letter-spacing: -0.01em;
-}
-
-/* Chart blocks (precip strip + temp band share the same column grid) */
-.chartblock {
-  margin-bottom: 8px;
-}
-.chartblock__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 7px;
-  flex-wrap: wrap;
-}
-.chartblock__label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-muted);
-  letter-spacing: 0.02em;
-}
-.chartblock__unit {
-  color: var(--ink-faint);
-  font-weight: 500;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(23, 24, 28, 0.1);
 }
 
 /* Legend — round dots under the strip so the stack colors read without hover
@@ -465,7 +374,7 @@ body {
   gap: 10px;
 }
 .strip {
-  margin-top: 22px;
+  margin-top: 34px;
 }
 /* clearance so the "지금" marker above the current column clears the label above */
 .strip .stripwrap {
@@ -481,7 +390,7 @@ body {
   position: relative;
   width: 26px;
   flex: none;
-  height: 100px;
+  height: 140px;
 }
 .strip__axis span {
   position: absolute;
@@ -494,9 +403,9 @@ body {
 .strip__cols {
   position: relative;
   display: flex;
-  gap: 4px;
+  gap: 5px;
   align-items: flex-end;
-  height: 100px;
+  height: 140px;
   flex: 1;
   min-width: 0;
 }
@@ -506,8 +415,8 @@ body {
   inset: 0;
   background-image: repeating-linear-gradient(
     to top,
-    var(--hairline) 0,
-    var(--hairline) 1px,
+    rgba(23, 24, 28, 0.06) 0,
+    rgba(23, 24, 28, 0.06) 1px,
     transparent 1px,
     transparent 25%
   );
@@ -571,32 +480,6 @@ body {
   color: var(--p-mod); /* a time-on-data marker, not a brand mark */
   white-space: nowrap;
 }
-/* Temperature band — continuous p10–p90 area + median line (SVG), aligned to precip */
-.chartblock--temp .strip__axis {
-  height: 38px;
-}
-#tempRow {
-  position: relative;
-  height: 38px;
-  flex: 1;
-  min-width: 0;
-}
-.tempsvg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  overflow: visible;
-}
-.tempsvg__band {
-  fill: var(--temp-band);
-}
-.tempsvg__line {
-  stroke: var(--temp-warm);
-  stroke-width: 2;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-
 .strip__times {
   display: flex;
   gap: 4px;
@@ -652,9 +535,9 @@ body {
   color: #fff;
 }
 
-/* ===== Board — the scenario hero (compact) ===== */
+/* ===== Board — the scenario hero ===== */
 .board {
-  margin: 0 0 4px;
+  margin: 0 0 10px;
 }
 /* re-rendered content settles in with a small breath rather than snapping */
 .board > * {
@@ -669,56 +552,63 @@ body {
 .board__head {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
 }
 .board__when {
   margin: 0;
-  font-size: 19px;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 .board__sub {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--ink-subtle);
 }
 .board__scenarios {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 7px;
 }
+/* each scenario is a soft band of light resting on the sky — the lead one
+   glows brightest. No borders, no hard cards; just pooled light. */
 .scenario {
   display: grid;
-  grid-template-columns: 66px 1fr 46px;
+  grid-template-columns: 76px 1fr 64px;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  background: none;
+  background: rgba(255, 255, 255, 0.5);
   border: none;
-  padding: 6px 10px;
-  border-radius: 10px;
+  padding: 13px 18px;
+  border-radius: 16px;
   cursor: pointer;
   text-align: left;
   font-family: var(--sans);
-  transition: background 0.15s, box-shadow 0.15s;
+  transition: background 0.2s, transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .scenario:hover {
-  background: #f4f6f9;
+  background: rgba(255, 255, 255, 0.78);
+  transform: translateY(-1px);
+}
+.scenario.is-lead {
+  background: rgba(255, 255, 255, 0.88);
 }
 .scenario__label {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--ink-muted);
 }
 .scenario.is-lead .scenario__label {
   color: var(--ink);
   font-weight: 700;
+  font-size: 16px;
 }
 .scenario__track {
-  height: 10px;
-  background: var(--hairline);
-  border-radius: 5px;
+  height: 14px;
+  background: rgba(23, 24, 28, 0.07);
+  border-radius: 999px;
   overflow: hidden;
 }
 .scenario__fill {
@@ -732,103 +622,37 @@ body {
 .scenario__pct {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   text-align: right;
   color: var(--ink-muted);
 }
 .scenario.is-lead .scenario__pct {
-  font-size: 16px;
+  font-size: 22px;
+  font-weight: 700;
   color: var(--ink);
 }
 /* picked = a soft pool of the data's own blue, not a hard brand border */
-.scenario.is-picked {
-  background: rgba(47, 127, 224, 0.09);
-}
+.scenario.is-picked,
 .scenario.is-picked:hover {
-  background: rgba(47, 127, 224, 0.12);
+  background: rgba(47, 127, 224, 0.13);
 }
 .scenario.is-picked .scenario__label {
   color: var(--ink);
 }
 .board__cond {
-  margin: 14px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--hairline);
+  margin: 18px 4px 0;
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  font-size: 12.5px;
-  color: var(--ink-subtle);
-}
-
-.ro {
-  padding-top: 0;
-}
-.ro__label {
-  font-size: 12px;
-  color: var(--ink-subtle);
-  margin-bottom: 4px;
-}
-.ro__val {
-  font-family: var(--mono);
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--ink);
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-.ro__sub {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--ink-subtle);
-}
-/* wind readout keeps a little range graph (p10–p90 band + median tick) */
-.wind__val {
-  font-family: var(--mono);
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--ink);
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-.wind__unit {
   font-size: 13px;
-  color: var(--ink-subtle);
-  margin-left: 4px;
-}
-.wind__range {
-  margin-top: 12px;
-  height: 6px;
-  background: var(--hairline);
-  border-radius: 3px;
-  position: relative;
-}
-.wind__band {
-  position: absolute;
-  height: 100%;
-  background: var(--wind);
-  border-radius: 3px;
-  opacity: 0.4;
-}
-.wind__median {
-  position: absolute;
-  top: -3px;
-  width: 2px;
-  height: 12px;
-  background: var(--wind);
-  border-radius: 1px;
-}
-.wind__spread {
-  margin-top: 8px;
-  font-size: 12px;
   color: var(--ink-subtle);
 }
 
 /* Method footer */
 .method {
-  margin-top: 24px;
-  padding-top: 14px;
-  border-top: 1px solid var(--hairline);
+  margin-top: 40px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(23, 24, 28, 0.07);
 }
 .method__src {
   margin: 0 0 10px;
@@ -962,88 +786,49 @@ table.data td .num {
     transform: translateY(0);
   }
 }
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(25, 158, 112, 0.5);
-  }
-  70% {
-    box-shadow: 0 0 0 6px rgba(25, 158, 112, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(25, 158, 112, 0);
-  }
-}
-
 /* ---------------------------------------------------------------- Responsive */
 @media (max-width: 900px) {
-  .app {
-    flex-direction: column;
+  .top {
+    padding: 14px 16px 0;
   }
-  /* the control rail becomes a tight header, not a tall column */
-  .rail {
-    width: auto;
-    height: auto;
-    position: static;
-    border-right: none;
-    border-bottom: 1px solid var(--hairline);
-    padding: 12px 16px 12px;
-    gap: 10px;
-  }
-  .loc {
-    gap: 7px;
-  }
-  .loc .eyebrow {
-    display: none; /* "현재 지역" label is redundant on the phone header */
+  .sheet {
+    padding: 20px 16px 40px;
   }
   .loc__name {
-    font-size: 20px;
-    margin: 0;
-  }
-  .search__input {
-    padding: 6px 4px 6px 24px;
-    font-size: 13.5px;
-  }
-  .now {
-    padding-top: 10px;
-  }
-  .live {
-    margin-bottom: 7px;
-  }
-  .now__line {
-    font-size: 13.5px;
-    line-height: 1.45;
-  }
-  .now__meta {
-    margin-top: 6px;
-  }
-  .canvas {
-    padding: 14px 16px 40px;
-  }
-  .canvas__head {
-    margin-bottom: 10px;
-  }
-  .canvas__hint {
-    font-size: 12.5px;
-    margin-top: 4px;
+    font-size: 24px;
   }
   .board__when {
-    font-size: 18px;
+    font-size: 20px;
+  }
+  .strip__axis,
+  .strip__cols {
+    height: 116px;
   }
 }
 @media (max-width: 560px) {
-  .canvas__head {
-    flex-direction: column;
-    gap: 10px;
+  .brand__sub {
+    display: none;
   }
-  .board__cond {
-    gap: 22px;
-    margin-top: 12px;
-    padding-top: 12px;
+  .sheet__head {
+    align-items: baseline;
+  }
+  .loc__name {
+    font-size: 21px;
   }
   .scenario {
-    grid-template-columns: 58px 1fr 44px;
+    grid-template-columns: 64px 1fr 54px;
     gap: 10px;
-    padding: 7px 6px;
+    padding: 11px 13px;
+    border-radius: 14px;
+  }
+  .scenario.is-lead .scenario__pct {
+    font-size: 19px;
+  }
+  .search__input {
+    width: 118px;
+  }
+  .search__input:focus {
+    width: 150px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

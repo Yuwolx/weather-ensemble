@@ -25,21 +25,16 @@
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
-    <div class="app">
-      <!-- ===== Control rail ===== -->
-      <aside class="rail">
+    <div class="page">
+      <!-- ===== Top bar: brand + location controls in one quiet line ===== -->
+      <header class="top">
         <div class="brand">
           <span class="brand__dot" aria-hidden="true"></span>
           <span class="brand__name">ENSEMBLE</span>
           <span class="brand__sub">기상 합의</span>
         </div>
-
-        <section class="loc" aria-label="지역">
-          <p class="eyebrow">현재 지역</p>
-          <h1 class="loc__name" id="vRegion">—</h1>
-
+        <div class="top__loc">
           <div class="favs" id="favs"></div>
-
           <form class="search" id="searchForm" role="search" autocomplete="off">
             <svg class="search__icon" viewBox="0 0 20 20" aria-hidden="true">
               <circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.6" />
@@ -49,15 +44,14 @@
               class="search__input"
               id="searchInput"
               type="text"
-              placeholder="전국 시·군·구 검색"
+              placeholder="지역 검색"
               aria-label="전국 시군구 검색"
               aria-expanded="false"
               aria-controls="suggest"
             />
             <ul class="suggest" id="suggest" role="listbox" hidden></ul>
           </form>
-
-          <button class="geo" id="geoBtn" type="button">
+          <button class="geo" id="geoBtn" type="button" title="현재 위치">
             <svg viewBox="0 0 20 20" aria-hidden="true">
               <circle cx="10" cy="10" r="3" fill="currentColor" />
               <circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5" />
@@ -66,15 +60,14 @@
               <line x1="0.5" y1="10" x2="3" y2="10" stroke="currentColor" stroke-width="1.5" />
               <line x1="17" y1="10" x2="19.5" y2="10" stroke="currentColor" stroke-width="1.5" />
             </svg>
-            <span>현재 위치</span>
           </button>
-        </section>
-      </aside>
+        </div>
+      </header>
 
-      <!-- ===== Instrument canvas ===== -->
-      <main class="canvas">
-        <div class="canvas__head">
-          <p class="eyebrow">경우의 수</p>
+      <!-- ===== One sheet of sky ===== -->
+      <main class="sheet">
+        <div class="sheet__head">
+          <h1 class="loc__name" id="vRegion">—</h1>
           <div class="daytabs" id="dayTabs" role="tablist" aria-label="날짜"></div>
         </div>
 
