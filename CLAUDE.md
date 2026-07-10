@@ -106,10 +106,25 @@
 - 단순화 커밋에서 제거된 것: 기온 p10–p90 밴드 차트, 레일 판정문/미니라인, 하루 요약, 바람 그래프.
 - **남은 알려진 이슈**: 실브라우저 검증은 이 PC(headless)로 완료, 실기기(폰 PWA) 확인은 미실시.
 
+## 배포 (준비 완료, 스위치만 남음)
+
+- **정적 서빙 준비 끝**: 모든 경로 상대(`./`), manifest scope `./`, `.nojekyll` 추가,
+  SW ASSETS 최신(v4). GitHub Pages 서브패스(`/weather-ensemble/`)에서 그대로 동작.
+- **절차**(사용자만 가능): ①레포 Settings → General → 공개(public) 전환
+  ②Settings → Pages → Source: Deploy from a branch → main / (root) → Save
+  ③1~2분 후 `https://yuwolx.github.io/weather-ensemble/` 접속, 폰에서 "홈 화면에 추가".
+- 공개 전환이 싫으면 대안: Cloudflare Pages/Netlify 무료(private 레포 연결 가능, 계정 연결 필요).
+
+## 모바일 접근성 (2026-07-10 정비)
+
+- 폰(≤560px)에서 시간별 스트립이 **가로 스크롤**(min-width 640px, 화면 끝까지 블리드,
+  스크롤바 숨김) — 막대 탭 타깃이 ~13px에서 24px+로. 키보드 화살표 이동은 그대로.
+- 노치/홈바 safe-area 패딩(`env(safe-area-inset-*)`, viewport-fit=cover) 반영.
+- 캔버스 비: reduced-motion·백그라운드 탭 정지, DPR 상한 2(배터리).
+
 ## 다음 후보 (무료 서비스 방향 기준, 업데이트)
 
-1. **GitHub Pages 공개 배포** — 무료 서비스니 공개가 곧 배포. 단 레포가 private라 **공개 전환은
-   사용자 결정 필요**(무료 플랜은 public 레포만 Pages 가능).
+1. **배포 스위치**(위 절차, 사용자 결정 대기).
 2. **회고 확장** — v1(어제 한 시각)을 넘어: 여러 날 누적 캘리브레이션("30%라던 날 실제로
    10번 중 3번 왔나"), 어제 전체 시간대 미니 스트립. 스냅샷이 쌓여야 의미 → 기기당 14일 보관 중.
 3. 기상청 공식 예보 기준선 얹기(공공데이터 키 ~1일), 비/눈 분리(겨울).
@@ -129,7 +144,7 @@
 ## 검증 커맨드 (이어받을 때 먼저 실행)
 
 ```bash
-node --test                 # 순수 로직 32개
+node --test                 # 순수 로직 29개 (죽은 verdict/timeOfDay 제거로 감소)
 node scripts/dom-verify.mjs # 실데이터 렌더 29개 (jsdom 1차 관문)
 python -m http.server 8848  # 로컬 구동 → localhost:8848
 ```

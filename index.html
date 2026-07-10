@@ -84,11 +84,13 @@
         <!-- Timeline: pick a different hour -->
         <section class="strip" aria-label="시간별 분포">
           <p class="strip__label">시간별 — 눌러서 다른 시각 보기</p>
-          <div class="stripwrap">
-            <div class="strip__axis" id="stripAxisY" aria-hidden="true"></div>
-            <div class="strip__cols" id="stripCols" role="group" aria-label="시간별 막대. 화살표 키로 시각을 이동합니다."></div>
+          <div class="stripscroll">
+            <div class="stripwrap">
+              <div class="strip__axis" id="stripAxisY" aria-hidden="true"></div>
+              <div class="strip__cols" id="stripCols" role="group" aria-label="시간별 막대. 화살표 키로 시각을 이동합니다."></div>
+            </div>
+            <div class="strip__times" id="stripTimes" aria-hidden="true"></div>
           </div>
-          <div class="strip__times" id="stripTimes" aria-hidden="true"></div>
           <ul class="legend" id="legend" aria-label="막대 색상 의미"></ul>
         </section>
 

@@ -174,7 +174,9 @@ body::after {
   width: 100%;
   max-width: 780px;
   margin: 0 auto;
-  padding: 18px 24px 0;
+  /* respect phone notches/home bars (viewport-fit=cover) */
+  padding: calc(18px + env(safe-area-inset-top, 0px)) calc(24px + env(safe-area-inset-right, 0px)) 0
+    calc(24px + env(safe-area-inset-left, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -340,7 +342,8 @@ body::after {
   width: 100%;
   max-width: 780px;
   margin: 0 auto;
-  padding: 30px 24px 48px;
+  padding: 30px calc(24px + env(safe-area-inset-right, 0px)) calc(48px + env(safe-area-inset-bottom, 0px))
+    calc(24px + env(safe-area-inset-left, 0px));
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -951,10 +954,12 @@ body::after {
 /* ---------------------------------------------------------------- Responsive */
 @media (max-width: 900px) {
   .top {
-    padding: 14px 16px 0;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) 0
+      calc(16px + env(safe-area-inset-left, 0px));
   }
   .sheet {
-    padding: 20px 16px 40px;
+    padding: 20px calc(16px + env(safe-area-inset-right, 0px)) calc(40px + env(safe-area-inset-bottom, 0px))
+      calc(16px + env(safe-area-inset-left, 0px));
   }
   .loc__name {
     font-size: 24px;
@@ -970,6 +975,22 @@ body::after {
 @media (max-width: 560px) {
   .brand__sub {
     display: none;
+  }
+  /* thumb-sized hour bars: the strip keeps ~24px columns and scrolls sideways,
+     bleeding to the screen edge so the gesture feels native */
+  .stripscroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .stripscroll::-webkit-scrollbar {
+    display: none;
+  }
+  .stripscroll .stripwrap,
+  .stripscroll .strip__times {
+    min-width: 640px;
   }
   .sheet__head {
     align-items: baseline;
