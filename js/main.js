@@ -4,8 +4,8 @@
 import { REGIONS } from './regions.js';
 import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS } from './config.js';
 import { loadEnsemble, loadActualsYesterday, getCurrentPosition, nearestRegion } from './api.js';
-import { analyzeHour, dayMood, pickRetroHour, retroVerdict } from './stats.js';
-import { saveDaySnapshots, getSnapshot } from './snapshots.js';
+import { analyzeHour, dayMood, agreement, pickRetroHour, retroVerdict, summarizeActuals, settlePicks } from './stats.js';
+import { saveDaySnapshots, getSnapshot, savePick, getPicks, appendRecord, getRecord, regionKeyOf } from './snapshots.js';
 import { dateOf, addDays } from './format.js';
 import * as ui from './ui.js';
 
@@ -34,8 +34,6 @@ const refs = {
   search: $('searchInput'),
   suggest: $('suggest'),
   geo: $('geoBtn'),
-  tableToggle: $('tableToggle'),
-  tableWrap: $('tableWrap'),
   retro: $('retro'),
 };
 
@@ -109,10 +107,16 @@ function setActiveDay(date, rerender = true) {
   state.activeDay = date;
   state.hours = state.byDay.get(date);
   state.selected = peakIndex(state.hours);
-  state.picked = null;
+  state.picked = restoredPick();
   // the active day's mood tints the whole screen's air (sky wash in CSS)
   document.documentElement.dataset.mood = dayMood(state.hours, MOOD_THRESHOLDS);
   if (rerender) renderCanvas();
+}
+
+// A hunch made earlier for the selected hour survives reloads and hour-hopping.
+function restoredPick() {
+  const a = state.hours[state.selected];
+  return a ? getPicks(state.region, dateOf(a.time))[a.time] || null : null;
 }
 
 // ---- render ----------------------------------------------------------------
@@ -139,8 +143,19 @@ function renderCanvas() {
     },
   });
   renderBoard();
-  if (refs.tableToggle.getAttribute('aria-expanded') === 'true') {
-    ui.renderTable(refs.tableWrap, { analyzed: state.hours, todayDate: state.todayDate });
+  syncRainArt();
+}
+
+// Media-art rain: if the selected hour's leading scenario is rain, it rains on
+// screen — light rain falls thin and sparse, heavy rain dense and fast. Driven
+// by the hour the user is looking at, so tapping across the strip plays weather.
+function syncRainArt() {
+  const a = state.hours[state.selected];
+  const lead = a ? agreement(a.dist).dominantKey : null;
+  if (lead === 'light' || lead === 'mod' || lead === 'heavy') {
+    document.documentElement.dataset.rain = lead;
+  } else {
+    delete document.documentElement.dataset.rain;
   }
 }
 
@@ -153,48 +168,67 @@ function renderBoard() {
   });
 }
 
-// 돌아보기: settle yesterday's stored odds against what actually fell.
-// Quietly optional — no snapshot or no actuals just leaves the invitation line.
+// 돌아보기: yesterday's actual weather (always), the odds this device saw then
+// (if a snapshot exists), and the user's own hunches settled into a running
+// hit-rate. Renders the invitation immediately, upgrades when actuals arrive.
 async function refreshRetro() {
   const region = state.region;
-  const snap = getSnapshot(region, addDays(state.todayDate, -1));
-  if (!snap) {
-    ui.renderRetro(refs.retro, null);
-    return;
-  }
+  ui.renderRetro(refs.retro, null); // instant baseline; upgraded below
+  const yesterday = addDays(state.todayDate, -1);
   try {
     const actuals = await loadActualsYesterday(region.lat, region.lon);
     if (state.region !== region) return; // user moved on mid-fetch
-    const picked = pickRetroHour(snap.hours, actuals);
-    if (!picked) {
-      ui.renderRetro(refs.retro, null);
-      return;
+    const yActuals = new Map([...actuals].filter(([t]) => dateOf(t) === yesterday));
+    if (!yActuals.size) return;
+
+    // (1) what the odds said then, if this device saw them
+    const snap = getSnapshot(region, yesterday);
+    let forecast = null;
+    if (snap) {
+      const picked = pickRetroHour(snap.hours, yActuals);
+      if (picked) {
+        forecast = {
+          time: picked.time,
+          fraction: picked.snap.fraction,
+          mm: picked.mm,
+          verdict: retroVerdict(picked.snap.fraction, picked.mm, PRECIP_BUCKETS),
+        };
+      }
     }
+
+    // (2) the user's hunches, settled once into the running record
+    const settled = settlePicks(getPicks(region, yesterday), yActuals, PRECIP_BUCKETS);
+    const record = settled.length ? appendRecord(regionKeyOf(region), settled) : getRecord();
+
     ui.renderRetro(refs.retro, {
-      time: picked.time,
-      fraction: picked.snap.fraction,
-      mm: picked.mm,
-      verdict: retroVerdict(picked.snap.fraction, picked.mm, PRECIP_BUCKETS),
       todayDate: state.todayDate,
+      actual: summarizeActuals(yActuals),
+      forecast,
+      settled,
+      record,
     });
   } catch {
-    ui.renderRetro(refs.retro, null);
+    /* actuals unavailable — the invitation stays */
   }
 }
 
-// Tap a scenario to highlight it (toggle). Ephemeral — just a focus, no storage.
+// Tap a scenario = declare a hunch (toggle). Persisted per hour so tomorrow's
+// 돌아보기 can score it — 사용자 요청으로 '저장 없음' 원칙을 개정(2026-07-10).
 function pickScenario(key) {
   state.picked = state.picked === key ? null : key;
+  const a = state.hours[state.selected];
+  if (a) savePick(state.region, a.time, state.picked);
   renderBoard();
 }
 
 function selectHour(i) {
   state.selected = i;
-  state.picked = null; // a new hour clears the highlight
+  state.picked = restoredPick(); // each hour remembers its own hunch
   refs.strip.cols.querySelectorAll('.col').forEach((c) => {
     c.setAttribute('aria-pressed', String(Number(c.dataset.i) === i));
   });
   renderBoard();
+  syncRainArt();
 }
 
 // ---- favorites -------------------------------------------------------------
@@ -289,15 +323,6 @@ refs.strip.cols.addEventListener('keydown', (e) => {
   const next = Math.max(0, Math.min(state.hours.length - 1, state.selected + delta));
   selectHour(next);
   refs.strip.cols.querySelector(`.col[data-i="${next}"]`)?.focus();
-});
-
-// ---- table toggle ----------------------------------------------------------
-refs.tableToggle.addEventListener('click', () => {
-  const next = refs.tableToggle.getAttribute('aria-expanded') !== 'true';
-  refs.tableToggle.setAttribute('aria-expanded', String(next));
-  refs.tableToggle.textContent = next ? '표 접기' : '숫자를 표로 보기';
-  refs.tableWrap.hidden = !next;
-  if (next) ui.renderTable(refs.tableWrap, { analyzed: state.hours, todayDate: state.todayDate });
 });
 
 // ---- boot ------------------------------------------------------------------

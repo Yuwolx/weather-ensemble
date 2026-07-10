@@ -117,6 +117,38 @@ export function pickRetroHour(snapHours, actualsByTime) {
   return { time: best.time, snap: best, mm: mmOf(best) };
 }
 
+// Yesterday in one honest breath: how much fell in total, and when it fell
+// hardest. rained uses the same 0.1mm line as everything else in the app.
+export function summarizeActuals(actualsByTime) {
+  let totalMm = 0;
+  let peakTime = null;
+  let peakMm = 0;
+  for (const [time, mm] of actualsByTime) {
+    if (!isNum(mm)) continue;
+    totalMm += mm;
+    if (mm > peakMm) {
+      peakMm = mm;
+      peakTime = time;
+    }
+  }
+  const rained = peakMm >= 0.1;
+  return { totalMm, peakTime: rained ? peakTime : null, peakMm, rained };
+}
+
+// Score the user's own hunches (picked scenarios) against what actually fell.
+// Hours with no actual data are skipped — never guessed.
+export function settlePicks(picks, actualsByTime, buckets) {
+  const out = [];
+  for (const [time, picked] of Object.entries(picks)) {
+    if (!actualsByTime.has(time)) continue;
+    const mm = actualsByTime.get(time);
+    if (!isNum(mm)) continue;
+    const actual = classifyPrecip(mm, buckets);
+    out.push({ time, picked, actual, mm, hit: picked === actual });
+  }
+  return out;
+}
+
 // The honest verdict: which scenario actually happened, whether it was the
 // forecast favorite, and what probability the winner had been given. hit=false
 // with a small prob is the whole point — 작은 확률의 승리이지 예보의 배신이 아니다.

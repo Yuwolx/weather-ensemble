@@ -50,10 +50,63 @@ function prune(todayDate) {
     const stale = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k?.startsWith(PREFIX) && k.slice(-10) < min) stale.push(k);
+      if ((k?.startsWith(PREFIX) || k?.startsWith(PICK_PREFIX)) && k.slice(-10) < min) stale.push(k);
     }
     stale.forEach((k) => localStorage.removeItem(k));
   } catch {
     /* best effort */
   }
 }
+
+// ---- 예감 (the user's own scenario picks) -----------------------------------
+// Picking a scenario is a quiet declaration of a hunch. We keep it so tomorrow
+// can answer "내 예감은 맞았나" — information, never stakes.
+const PICK_PREFIX = 'pick:';
+const pickKeyOf = (region, date) => `${PICK_PREFIX}${region.lat.toFixed(2)},${region.lon.toFixed(2)}:${date}`;
+
+export function savePick(region, time, key) {
+  const k = pickKeyOf(region, time.slice(0, 10));
+  try {
+    const picks = JSON.parse(localStorage.getItem(k) || '{}');
+    if (key) picks[time] = key;
+    else delete picks[time];
+    localStorage.setItem(k, JSON.stringify(picks));
+  } catch {
+    /* quota/privacy — hunches just aren't recorded */
+  }
+}
+
+export function getPicks(region, date) {
+  try {
+    return JSON.parse(localStorage.getItem(pickKeyOf(region, date)) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+// ---- 통산 기록 — one running ledger of settled hunches (capped) --------------
+const RECORD_KEY = 'hunch-record';
+
+export function appendRecord(regionKey, entries) {
+  try {
+    const rec = JSON.parse(localStorage.getItem(RECORD_KEY) || '[]');
+    const seen = new Set(rec.map((r) => `${r.rk}|${r.time}`));
+    for (const e of entries) {
+      if (!seen.has(`${regionKey}|${e.time}`)) rec.push({ rk: regionKey, ...e });
+    }
+    localStorage.setItem(RECORD_KEY, JSON.stringify(rec.slice(-200)));
+    return rec;
+  } catch {
+    return entries.map((e) => ({ rk: regionKey, ...e }));
+  }
+}
+
+export function getRecord() {
+  try {
+    return JSON.parse(localStorage.getItem(RECORD_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+export const regionKeyOf = (region) => `${region.lat.toFixed(2)},${region.lon.toFixed(2)}`;

@@ -197,9 +197,10 @@ export function hideTooltip() {
   if (tooltipEl) tooltipEl.style.display = 'none';
 }
 
-// 돌아보기 — yesterday's forecast distribution settled against what actually
-// fell. Information only (no bets, no scores): the sentence must make an upset
-// feel like "작은 확률이 이겼다", never "예보가 틀렸다".
+// 돌아보기 — three quiet ledger lines: what actually fell yesterday (always),
+// what the odds said then (if this device saw them), and how the user's own
+// hunches scored. Information only: an upset reads "작은 확률이 이겼다",
+// never "예보가 틀렸다".
 export function renderRetro(container, data) {
   const head = el('p', { class: 'eyebrow', text: '돌아보기' });
   if (!data) {
@@ -207,73 +208,87 @@ export function renderRetro(container, data) {
       head,
       el('p', {
         class: 'retro__empty',
-        text: '오늘 본 경우의 수를 이 기기가 기억해 뒀다가, 내일 실제 날씨와 대조해 보여드립니다.',
+        text: '오늘 본 경우의 수를 이 기기가 기억해 뒀다가, 내일 실제 날씨와 대조해 보여드립니다. 시나리오를 골라 두면 당신의 예감도 함께 채점됩니다.',
       }),
     );
     return;
   }
-  const { time, fraction, mm: actualMm, verdict, todayDate } = data;
-  const segs = PRECIP_BUCKETS.filter((b) => fraction[b.key] > 0).map((b) =>
-    el('span', { class: 'retro__seg', style: `width:${fraction[b.key] * 100}%;background:var(--p-${b.key})` }),
-  );
-  // the marker sits under the middle of the scenario that actually happened
-  let acc = 0;
-  let center = 0;
-  for (const b of PRECIP_BUCKETS) {
-    const w = fraction[b.key];
-    if (b.key === verdict.actualKey) {
-      center = (acc + w / 2) * 100;
-      break;
-    }
-    acc += w;
-  }
-  const actualLabel = bucketOf(verdict.actualKey).label;
-  const mmTxt = actualMm >= 0.1 ? ` (${actualMm.toFixed(1)}mm)` : '';
-  const probTxt = pct(verdict.prob);
-  const phrase = verdict.hit
-    ? `그때의 우세가 그대로 맞았습니다 (${probTxt}).`
-    : verdict.prob <= 0.25
-      ? `그때 화면에선 ${probTxt}뿐이었죠 — 작은 확률이 이겼습니다.`
-      : `${probTxt}였던 '${actualLabel}'이 우세를 제쳤습니다.`;
-  container.replaceChildren(
-    head,
-    el('p', { class: 'retro__line' }, [
-      el('strong', { text: `${dayLabel(time, todayDate)} ${hourLabel(time)}` }),
-      `, 실제는 '${actualLabel}'${mmTxt}. ${phrase}`,
-    ]),
-    el('div', { class: 'retro__bar' }, [
-      el('span', { class: 'retro__segs' }, segs),
-      el('span', { class: 'retro__mark', style: `left:${center}%` }),
-    ]),
-    el('p', { class: 'retro__sub', text: '그때 이 기기에서 본 경우의 수 · 실측은 재분석 기반 근사값' }),
-  );
-}
+  const { todayDate, actual, forecast, settled, record } = data;
+  const parts = [head];
 
-// Accessibility / transparency: the same data as a plain table.
-export function renderTable(container, { analyzed, todayDate }) {
-  const head = el('tr', {}, [
-    el('th', { text: '시각' }),
-    el('th', { text: '비 확률' }),
-    ...PRECIP_BUCKETS.map((b) => el('th', { text: b.label })),
-    el('th', { text: '바람 med' }),
-    el('th', { text: 'n' }),
-  ]);
-  const rows = analyzed.map((a) =>
-    el('tr', {}, [
-      el('td', { text: `${dayLabel(a.time, todayDate)} ${hourLabel(a.time)}` }),
-      el('td', {}, [el('span', { class: 'num', text: pct(a.rain.probability) })]),
-      ...PRECIP_BUCKETS.map((b) =>
-        el('td', {}, [el('span', { class: 'num', text: pct(a.dist.fraction[b.key]) })]),
-      ),
-      el('td', {}, [el('span', { class: 'num', text: ms(a.wind.median) })]),
-      el('td', {}, [el('span', { class: 'num', text: String(a.dist.n) })]),
+  // (1) 어제 실제
+  parts.push(
+    el('p', { class: 'retro__line' }, [
+      el('strong', { text: '어제 실제' }),
+      actual.rained
+        ? ` — ${hourLabel(actual.peakTime)}에 가장 세게(${actual.peakMm.toFixed(1)}mm), 하루 ${actual.totalMm.toFixed(1)}mm.`
+        : ' — 비는 오지 않았습니다.',
     ]),
   );
-  const table = el('table', { class: 'data' }, [
-    el('thead', {}, head),
-    el('tbody', {}, rows),
-  ]);
-  container.replaceChildren(table);
+
+  // (2) 그때의 경우의 수 (스냅샷이 있을 때)
+  if (forecast) {
+    const { time, fraction, verdict } = forecast;
+    const segs = PRECIP_BUCKETS.filter((b) => fraction[b.key] > 0).map((b) =>
+      el('span', { class: 'retro__seg', style: `width:${fraction[b.key] * 100}%;background:var(--p-${b.key})` }),
+    );
+    let acc = 0;
+    let center = 0;
+    for (const b of PRECIP_BUCKETS) {
+      const w = fraction[b.key];
+      if (b.key === verdict.actualKey) {
+        center = (acc + w / 2) * 100;
+        break;
+      }
+      acc += w;
+    }
+    const actualLabel = bucketOf(verdict.actualKey).label;
+    const probTxt = pct(verdict.prob);
+    const phrase = verdict.hit
+      ? `그때의 우세가 그대로 맞았습니다 (${probTxt}).`
+      : verdict.prob < 0.005
+        ? '그때 화면엔 아예 없던 경우였습니다 — 그런 날도 있습니다.'
+        : verdict.prob <= 0.25
+          ? `그때 화면에선 ${probTxt}뿐이었죠 — 작은 확률이 이겼습니다.`
+          : `${probTxt}였던 '${actualLabel}'이 우세를 제쳤습니다.`;
+    parts.push(
+      el('p', { class: 'retro__line' }, [
+        el('strong', { text: `${dayLabel(time, todayDate)} ${hourLabel(time)}` }),
+        ` '${actualLabel}' — ${phrase}`,
+      ]),
+      el('div', { class: 'retro__bar' }, [
+        el('span', { class: 'retro__segs' }, segs),
+        el('span', { class: 'retro__mark', style: `left:${center}%` }),
+      ]),
+    );
+  } else {
+    parts.push(
+      el('p', { class: 'retro__empty', text: '오늘 본 경우의 수는 기억해 뒀다가 내일 대조해 드립니다.' }),
+    );
+  }
+
+  // (3) 당신의 예감 — settled hunches + running hit rate
+  if (settled.length || record.length) {
+    const lines = settled.slice(0, 3).map((s) =>
+      el('p', { class: 'retro__hunch' }, [
+        `${hourLabel(s.time)} 예감 '${bucketOf(s.picked).label}' → 실제 '${bucketOf(s.actual).label}' `,
+        el('strong', { class: s.hit ? 'is-hit' : 'is-miss', text: s.hit ? '적중' : '빗나감' }),
+      ]),
+    );
+    const hits = record.filter((r) => r.hit).length;
+    parts.push(
+      el('div', { class: 'retro__hunches' }, [
+        el('p', { class: 'retro__line' }, [el('strong', { text: '당신의 예감' })]),
+        ...lines,
+        record.length
+          ? el('p', { class: 'retro__tally', text: `통산 ${hits}/${record.length} 적중 (${Math.round((hits / record.length) * 100)}%)` })
+          : null,
+      ]),
+    );
+  }
+
+  parts.push(el('p', { class: 'retro__sub', text: '실측은 재분석 기반 근사값 · 기록은 이 기기에만 저장됩니다' }));
+  container.replaceChildren(...parts);
 }
 
 // Search suggestions dropdown.

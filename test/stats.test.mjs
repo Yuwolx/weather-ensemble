@@ -86,6 +86,47 @@ test('retroVerdict: dominant scenario winning is a hit with its probability', ()
   assert.ok(Math.abs(v.prob - 0.7) < 1e-9);
 });
 
+import { summarizeActuals, settlePicks } from '../js/stats.js';
+
+test('summarizeActuals: totals the day and finds the wettest hour', () => {
+  const actuals = new Map([
+    ['2026-07-09T09:00', 0],
+    ['2026-07-09T15:00', 1.2],
+    ['2026-07-09T16:00', 0.4],
+  ]);
+  const s = summarizeActuals(actuals);
+  assert.ok(Math.abs(s.totalMm - 1.6) < 1e-9);
+  assert.equal(s.peakTime, '2026-07-09T15:00');
+  assert.equal(s.peakMm, 1.2);
+  assert.equal(s.rained, true);
+});
+
+test('summarizeActuals: a dry day reports rained=false', () => {
+  const s = summarizeActuals(new Map([['2026-07-09T09:00', 0], ['2026-07-09T10:00', 0.05]]));
+  assert.equal(s.rained, false);
+  assert.equal(s.peakTime, null);
+});
+
+test('settlePicks: scores each hunch against the actual bucket', () => {
+  const picks = { '2026-07-09T14:00': 'light', '2026-07-09T18:00': 'dry' };
+  const actuals = new Map([
+    ['2026-07-09T14:00', 0.5], // light → hit
+    ['2026-07-09T18:00', 2.0], // mod → miss
+  ]);
+  const settled = settlePicks(picks, actuals, PRECIP_BUCKETS);
+  assert.equal(settled.length, 2);
+  const at14 = settled.find((s) => s.time === '2026-07-09T14:00');
+  assert.deepEqual({ picked: at14.picked, actual: at14.actual, hit: at14.hit }, { picked: 'light', actual: 'light', hit: true });
+  const at18 = settled.find((s) => s.time === '2026-07-09T18:00');
+  assert.equal(at18.hit, false);
+  assert.equal(at18.actual, 'mod');
+});
+
+test('settlePicks: hours without actual data are skipped, not guessed', () => {
+  const settled = settlePicks({ '2026-07-09T23:00': 'dry' }, new Map(), PRECIP_BUCKETS);
+  assert.equal(settled.length, 0);
+});
+
 test('retroVerdict: a small probability winning is an upset, not a betrayal', () => {
   const v = retroVerdict({ dry: 0.72, light: 0.2, mod: 0.08, heavy: 0 }, 1.5, PRECIP_BUCKETS);
   assert.equal(v.actualKey, 'mod'); // 1.5mm/h = 비

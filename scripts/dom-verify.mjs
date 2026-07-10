@@ -78,13 +78,19 @@ check('one column is selected (aria-pressed)', d.querySelectorAll('#stripCols .c
 check('favorites rendered 2 chips', d.querySelectorAll('#favs .chip').length === 2);
 check('overlay hidden after load', d.getElementById('overlay').hidden === true);
 
-// selection interaction: tap a scenario → highlight; tap again → clears (no storage)
+// hunch interaction: tap a scenario → highlight + persisted; tap again → cleared
+const pickKeys = () =>
+  [...Array(dom.window.localStorage.length)].map((_, i) => dom.window.localStorage.key(i)).filter((k) => k.startsWith('pick:'));
 d.querySelector('#board .scenario').click();
 check('tapping a scenario highlights it', d.querySelectorAll('#board .scenario.is-picked').length === 1);
+check('the hunch is persisted for tomorrow\'s scoring',
+  pickKeys().some((k) => dom.window.localStorage.getItem(k).includes(':')), pickKeys().join(','));
 d.querySelector('#board .scenario.is-picked').click();
 check('tapping it again clears the highlight', d.querySelector('#board .scenario.is-picked') == null);
+check('clearing the pick also clears the stored hunch',
+  pickKeys().every((k) => dom.window.localStorage.getItem(k) === '{}'));
 
-// interaction paths: switch to tomorrow, then open the table
+// interaction paths: switch to tomorrow and back
 const tabs = d.querySelectorAll('#dayTabs .daytab');
 if (tabs.length > 1) {
   tabs[1].click();
@@ -92,9 +98,15 @@ if (tabs.length > 1) {
     `tomorrow cols=${d.querySelectorAll('#stripCols .col').length}`);
   tabs[0].click(); // back to today
 }
-d.getElementById('tableToggle').click();
-check('table renders rows on toggle', d.querySelectorAll('#tableWrap table.data tbody tr').length >= 1,
-  `rows=${d.querySelectorAll('#tableWrap table.data tbody tr').length}`);
+check('table view removed (사용자 결정)', !d.getElementById('tableToggle') && !d.getElementById('tableWrap'));
+
+// rain art: selecting an hour whose lead scenario is rain must set data-rain
+const leadOfCol = (i) => {
+  d.querySelectorAll('#stripCols .col')[i].click();
+  return d.documentElement.dataset.rain || '(none)';
+};
+const rainStates = [...d.querySelectorAll('#stripCols .col')].map((_, i) => leadOfCol(i));
+check('rain art reacts to selected hour (some state observed)', rainStates.length > 0, rainStates.join(' '));
 
 console.log('\n' + report.join('\n'));
 console.log(`\n지역: ${txt('#vRegion')}`);
