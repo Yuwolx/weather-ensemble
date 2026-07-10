@@ -2,9 +2,9 @@
 // Business logic lives in stats.js; rendering in ui.js; this file connects them.
 
 import { REGIONS } from './regions.js';
-import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM } from './config.js';
+import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS } from './config.js';
 import { loadEnsemble, getCurrentPosition, nearestRegion } from './api.js';
-import { analyzeHour } from './stats.js';
+import { analyzeHour, dayMood } from './stats.js';
 import { dateOf } from './format.js';
 import * as ui from './ui.js';
 
@@ -105,6 +105,8 @@ function setActiveDay(date, rerender = true) {
   state.hours = state.byDay.get(date);
   state.selected = peakIndex(state.hours);
   state.picked = null;
+  // the active day's mood tints the whole screen's air (sky wash in CSS)
+  document.documentElement.dataset.mood = dayMood(state.hours, MOOD_THRESHOLDS);
   if (rerender) renderCanvas();
 }
 
@@ -266,4 +268,5 @@ refs.tableToggle.addEventListener('click', () => {
 
 // ---- boot ------------------------------------------------------------------
 ui.renderFavorites(refs.favs, FAVORITES, null, selectRegion);
+ui.renderLegend($('legend'));
 selectRegion(FAVORITES[0]); // 수원시 권선구

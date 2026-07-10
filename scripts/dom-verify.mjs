@@ -49,8 +49,16 @@ check('column segment heights sum to ~100%', [...cols].every((c) => {
   return Math.abs(sum - 100) < 0.6;
 }));
 check('region label set', (txt('#vRegion') || '').includes('수원'), txt('#vRegion'));
-check('clutter removed (no sentence/digest/temp/legend)',
-  !d.getElementById('vLine') && !d.getElementById('digest') && !d.getElementById('tempRow') && !d.getElementById('legend'));
+check('clutter removed (no sentence/digest/temp)',
+  !d.getElementById('vLine') && !d.getElementById('digest') && !d.getElementById('tempRow'));
+check('legend shows all 4 bucket colors', d.querySelectorAll('#legend li .swatch').length === 4);
+check('day mood set on root (air wash)',
+  ['clear', 'unsettled', 'rainy'].includes(d.documentElement.dataset.mood), d.documentElement.dataset.mood);
+check('0% scenarios keep an honestly empty track', [...d.querySelectorAll('#board .scenario')].every((row) => {
+  const isZero = row.querySelector('.scenario__pct')?.textContent === '0%';
+  const w = parseFloat(row.querySelector('.scenario__fill')?.style.width || '0');
+  return !isZero || w === 0;
+}));
 check('board conditions is one compact line (temp·강수·바람)',
   /기온.*강수.*바람/.test(d.querySelector('#board .board__cond')?.textContent || ''),
   d.querySelector('#board .board__cond')?.textContent);

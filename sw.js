@@ -2,7 +2,7 @@
 // Strategy: network-first for our own files (so updates always show, no staleness),
 // falling back to cache when offline. Weather API calls are never cached — they
 // must be live. Bump CACHE on each deploy that changes the app shell.
-const CACHE = 'wx-ensemble-v2';
+const CACHE = 'wx-ensemble-v3'; // v3: 공기(Air) 개정 — 셸 파일 변경
 const ASSETS = [
   './',
   './index.html',
@@ -35,7 +35,11 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (url.origin !== self.location.origin) return; // API & fonts → straight to network
   e.respondWith(
-    fetch(e.request)
+    // cache:'no-cache' forces revalidation with the server, bypassing the HTTP
+    // cache. Without it, module files can mix versions after a deploy (a fresh
+    // main.js importing a stale config.js killed boot once) — ES module graphs
+    // must be all-new or all-cached, never a blend.
+    fetch(e.request, { cache: 'no-cache' })
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));

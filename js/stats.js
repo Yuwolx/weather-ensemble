@@ -88,6 +88,18 @@ export function analyzeHour(hour, buckets, rainThreshold) {
   };
 }
 
+// The day's overall "air", used to tint the screen's atmosphere: the mean rain
+// probability across the day's hours, cut into clear / unsettled / rainy. Mean
+// (not max) so one stray wet hour doesn't turn a clear day's sky grey — that
+// in-between case is exactly what 'unsettled' is for.
+export function dayMood(hours, thresholds) {
+  if (!hours.length) return 'unsettled'; // no data → neutral air
+  const mean = hours.reduce((s, h) => s + h.rain.probability, 0) / hours.length;
+  if (mean >= thresholds.rainy) return 'rainy';
+  if (mean >= thresholds.unsettled) return 'unsettled';
+  return 'clear';
+}
+
 // How much the models agree, derived from an existing precip distribution: the
 // dominant scenario and the share of members backing it. share≈1 → strong consensus;
 // share near 1/#buckets → the models are all over the place (which is itself the

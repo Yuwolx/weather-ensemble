@@ -8,8 +8,38 @@ import {
   spread,
   precipAmount,
   agreement,
+  dayMood,
 } from '../js/stats.js';
-import { PRECIP_BUCKETS, RAIN_THRESHOLD_MM } from '../js/config.js';
+import { PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS } from '../js/config.js';
+
+// dayMood: the day's overall "air" — drives the sky wash, so misclassifying a
+// rainy day as clear would color the whole screen wrong.
+const hoursWithProbs = (probs) => probs.map((p) => ({ rain: { probability: p } }));
+
+test('dayMood: mostly-wet day reads rainy', () => {
+  assert.equal(dayMood(hoursWithProbs([0.7, 0.8, 0.6, 0.9]), MOOD_THRESHOLDS), 'rainy');
+});
+
+test('dayMood: dry day reads clear', () => {
+  assert.equal(dayMood(hoursWithProbs([0, 0.05, 0.1, 0.02]), MOOD_THRESHOLDS), 'clear');
+});
+
+test('dayMood: a wet evening on a dry day reads unsettled, not clear', () => {
+  // 8 dry hours + 4 rainy evening hours → mean 0.27
+  assert.equal(
+    dayMood(hoursWithProbs([0, 0, 0, 0, 0.05, 0.05, 0.1, 0.1, 0.7, 0.8, 0.7, 0.75]), MOOD_THRESHOLDS),
+    'unsettled',
+  );
+});
+
+test('dayMood: thresholds are inclusive at the boundary', () => {
+  assert.equal(dayMood(hoursWithProbs([0.5, 0.5]), MOOD_THRESHOLDS), 'rainy');
+  assert.equal(dayMood(hoursWithProbs([0.2, 0.2]), MOOD_THRESHOLDS), 'unsettled');
+});
+
+test('dayMood: no hours falls back to unsettled (neutral air)', () => {
+  assert.equal(dayMood([], MOOD_THRESHOLDS), 'unsettled');
+});
 
 test('classifyPrecip puts values in the right bucket (half-open [min,max))', () => {
   assert.equal(classifyPrecip(0, PRECIP_BUCKETS), 'dry');

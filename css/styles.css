@@ -6,7 +6,26 @@
    document: a control rail + a live instrument canvas, day tabs, a "right now"
    readout, load-in motion. Lavender (#5e6ad2) is the brand mark alone. Precip
    ramp validated on white; monospaced numerics.
+
+   2026-07 "공기(Air)" revision: the active day's forecast tints the screen's
+   atmosphere — an ultra-low-chroma sky wash at the top (clear=warm ivory,
+   unsettled=neutral mist, rainy=cool blue-grey), rounded geometry, breathing
+   motion. Decorative gradients stay banned; this wash is data-driven air, the
+   one sanctioned exception (spec: docs/superpowers/specs/2026-07-10-air-design.md).
    ============================================================================ */
+
+/* Registered so the sky can cross-fade when the mood changes (falls back to an
+   instant switch in browsers without @property). */
+@property --air {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f9fafb;
+}
+@property --air-deep {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f4f5f7;
+}
 
 :root {
   --surface: #ffffff;
@@ -34,11 +53,32 @@
   --temp-warm: #e07b39; /* temperature band — warm, distinct from precip blue */
   --temp-band: rgba(224, 123, 57, 0.22);
 
+  /* sky wash — neutral mist until data says otherwise */
+  --air: #f9fafb;
+  --air-deep: #f4f5f7;
+
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 
   --rail-w: 340px;
+}
+
+/* the day's air: data-mood is set by main.js from the active day's forecast */
+:root[data-mood="clear"] {
+  --air: #fdf9f1;
+  --air-deep: #fbf4e8;
+}
+:root[data-mood="unsettled"] {
+  --air: #f9fafb;
+  --air-deep: #f4f5f7;
+}
+:root[data-mood="rainy"] {
+  --air: #f3f7fb;
+  --air-deep: #ebf1f8;
+}
+:root {
+  transition: --air 0.9s ease, --air-deep 0.9s ease;
 }
 
 * {
@@ -59,7 +99,10 @@ body {
 }
 body {
   margin: 0;
-  background: var(--surface);
+  /* the sky sits at the top of the page and dissolves into white — from afar
+     this is still a white app; up close the day has a temperature */
+  background: linear-gradient(to bottom, var(--air-deep) 0, var(--air) 240px, var(--surface) 620px)
+    no-repeat var(--surface);
   color: var(--ink);
   font-family: var(--sans);
   font-size: 15px;
@@ -392,26 +435,27 @@ body {
   font-weight: 500;
 }
 
-/* Legend */
+/* Legend — round dots under the strip so the stack colors read without hover
+   (phones have no tooltip) */
 .legend {
   display: flex;
-  gap: 14px;
+  gap: 16px;
   list-style: none;
-  margin: 0;
-  padding: 0;
+  margin: 10px 0 0;
+  padding: 0 0 0 36px;
   flex-wrap: wrap;
 }
 .legend li {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: var(--ink-muted);
+  font-size: 11.5px;
+  color: var(--ink-subtle);
 }
 .legend .swatch {
-  width: 11px;
-  height: 11px;
-  border-radius: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
 }
 
 /* Strip — the protagonist */
@@ -487,11 +531,11 @@ body {
   flex-direction: column;
   height: 100%;
   width: 100%;
-  border-radius: 3px 3px 0 0;
+  border-radius: 6px 6px 0 0;
   overflow: hidden;
   transform-origin: bottom;
-  transition: transform 0.12s;
-  animation: grow 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  animation: grow 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 .col:hover .col__stack {
   transform: translateY(-3px);
@@ -512,7 +556,7 @@ body {
   background: var(--p-heavy);
 }
 .col[aria-pressed="true"] .col__stack {
-  box-shadow: 0 0 0 2px var(--brand);
+  box-shadow: 0 0 0 2px rgba(47, 127, 224, 0.75); /* data blue, softened */
   transform: translateY(-3px);
 }
 .col--now::after {
@@ -524,7 +568,7 @@ body {
   font-family: var(--mono);
   font-size: 9.5px;
   font-weight: 600;
-  color: var(--brand);
+  color: var(--p-mod); /* a time-on-data marker, not a brand mark */
   white-space: nowrap;
 }
 /* Temperature band — continuous p10–p90 area + median line (SVG), aligned to precip */
@@ -612,6 +656,16 @@ body {
 .board {
   margin: 0 0 4px;
 }
+/* re-rendered content settles in with a small breath rather than snapping */
+.board > * {
+  animation: fadeup 0.35s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+.board > :nth-child(2) {
+  animation-delay: 0.04s;
+}
+.board > :nth-child(3) {
+  animation-delay: 0.08s;
+}
 .board__head {
   display: flex;
   align-items: baseline;
@@ -643,7 +697,7 @@ body {
   background: none;
   border: none;
   padding: 6px 10px;
-  border-radius: 7px;
+  border-radius: 10px;
   cursor: pointer;
   text-align: left;
   font-family: var(--sans);
@@ -670,10 +724,10 @@ body {
 .scenario__fill {
   display: block;
   height: 100%;
-  border-radius: 5px;
-  min-width: 3px;
+  border-radius: 999px;
+  /* no minimum — 0% must be an honestly empty track */
   transform-origin: left;
-  animation: growx 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: growx 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 .scenario__pct {
   font-family: var(--mono);
@@ -687,12 +741,15 @@ body {
   font-size: 16px;
   color: var(--ink);
 }
+/* picked = a soft pool of the data's own blue, not a hard brand border */
 .scenario.is-picked {
-  background: var(--brand-soft);
-  box-shadow: inset 0 0 0 1.5px var(--brand);
+  background: rgba(47, 127, 224, 0.09);
 }
 .scenario.is-picked:hover {
-  background: var(--brand-soft);
+  background: rgba(47, 127, 224, 0.12);
+}
+.scenario.is-picked .scenario__label {
+  color: var(--ink);
 }
 .board__cond {
   margin: 14px 0 0;
@@ -893,6 +950,16 @@ table.data td .num {
   }
   to {
     transform: scaleX(1);
+  }
+}
+@keyframes fadeup {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 @keyframes pulse {

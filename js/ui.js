@@ -40,6 +40,19 @@ export function renderFavorites(container, favs, activeName, onSelect) {
   );
 }
 
+// Color key for the strip's stacked segments. Phones have no hover tooltip, so
+// without this the four colors are unreadable to a first-time user.
+export function renderLegend(container) {
+  container.replaceChildren(
+    ...PRECIP_BUCKETS.map((b) =>
+      el('li', {}, [
+        el('span', { class: 'swatch', style: `background:var(--p-${b.key})` }),
+        b.label,
+      ]),
+    ),
+  );
+}
+
 // Day tabs (오늘 / 내일) — the segmented control that makes the canvas operable.
 export function renderDayTabs(container, { days, activeDate, todayDate, onSelect }) {
   container.replaceChildren(
@@ -70,7 +83,7 @@ export function renderStrip(refs, { analyzed, todayDate, nowTime, selectedIndex,
     const classes = ['col'];
     if (a.time === nowTime) classes.push('col--now');
 
-    const stack = el('div', { class: 'col__stack', style: `animation-delay:${i * 16}ms` });
+    const stack = el('div', { class: 'col__stack', style: `animation-delay:${i * 22}ms` });
     for (const key of SEG_ORDER) {
       const frac = a.dist.fraction[key];
       if (frac <= 0) continue;
@@ -129,7 +142,8 @@ export function renderBoard(container, { analyzedHour, todayDate, picked, onPick
     }, [
       el('span', { class: 'scenario__label', text: b.label }),
       el('span', { class: 'scenario__track' }, [
-        el('span', { class: 'scenario__fill', style: `width:${Math.max(frac * 100, 1.5)}%;background:var(--p-${b.key})` }),
+        // 0% stays an honestly empty track; tiny-but-real fractions keep a sliver
+        el('span', { class: 'scenario__fill', style: `width:${frac > 0 ? Math.max(frac * 100, 1.5) : 0}%;background:var(--p-${b.key})` }),
       ]),
       el('span', { class: 'scenario__pct num', text: pct(frac) }),
     ]);
