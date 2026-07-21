@@ -266,6 +266,52 @@ test('brierScore: empty or invalid entries return null, not NaN', () => {
   assert.equal(brierScore([{ p: null, wet: true }]), null);
 });
 
+// 기관별 적중 — 같은 날을 기관(모델)별로 따로 채점해 순위를 매긴다.
+// 각 기관의 우세 시나리오가 실제와 맞은 시간 비율(hitRate)이 1차,
+// 실제에 준 평균 확률(meanProb)이 동률 판정 기준.
+import { modelDayScores, perModelDistributions } from '../js/stats.js';
+
+const mHour = (time, models) => ({ time, models });
+const frac4 = (dry, light, mod, heavy) => ({ fraction: { dry, light, mod, heavy }, n: 10 });
+
+test('modelDayScores: scores each agency separately and ranks by hit rate', () => {
+  const hours = [
+    mHour('2026-07-20T10:00', { a: frac4(0.9, 0.1, 0, 0), b: frac4(0.2, 0.8, 0, 0) }), // actual dry
+    mHour('2026-07-20T11:00', { a: frac4(0.8, 0.2, 0, 0), b: frac4(0.3, 0.6, 0.1, 0) }), // actual light
+  ];
+  const actuals = new Map([
+    ['2026-07-20T10:00', 0],
+    ['2026-07-20T11:00', 0.5],
+  ]);
+  const s = modelDayScores(hours, actuals, PRECIP_BUCKETS);
+  assert.equal(s.length, 2);
+  assert.equal(s[0].n, 2);
+  // a: dry hit(0.9→dry 맞음), light miss → hits 1, meanProb (0.9+0.2)/2=0.55
+  // b: dry miss, light hit → hits 1, meanProb (0.2+0.6)/2=0.4 → a가 위여야 함
+  const a = s.find((x) => x.model === 'a');
+  const b = s.find((x) => x.model === 'b');
+  assert.equal(a.hits, 1);
+  assert.equal(b.hits, 1);
+  assert.ok(Math.abs(a.meanProb - 0.55) < 1e-9);
+  assert.equal(s[0].model, 'a'); // 동률 적중이면 실제에 더 후한 확률을 준 쪽이 위
+});
+
+test('modelDayScores: hours without actuals or model data are skipped, empty input → []', () => {
+  const hours = [
+    mHour('2026-07-20T10:00', { a: frac4(1, 0, 0, 0) }), // no actual
+    { time: '2026-07-20T11:00' }, // no models
+  ];
+  assert.deepEqual(modelDayScores(hours, new Map([['2026-07-20T11:00', 0]]), PRECIP_BUCKETS), []);
+});
+
+test('perModelDistributions: buckets each agency\'s own members; empty agencies dropped', () => {
+  const d = perModelDistributions({ ec: [0, 0.5, 2.0], gfs: [0, 0], empty: [null, NaN] }, PRECIP_BUCKETS);
+  assert.ok(Math.abs(d.ec.fraction.dry - 1 / 3) < 1e-9);
+  assert.equal(d.ec.n, 3);
+  assert.equal(d.gfs.fraction.dry, 1);
+  assert.equal(d.empty, undefined);
+});
+
 test('classifyPrecip puts values in the right bucket (half-open [min,max))', () => {
   assert.equal(classifyPrecip(0, PRECIP_BUCKETS), 'dry');
   assert.equal(classifyPrecip(0.09, PRECIP_BUCKETS), 'dry');

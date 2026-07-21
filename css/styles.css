@@ -942,6 +942,64 @@ body::after {
   font-weight: 600;
   color: var(--ink);
 }
+/* 기관별 적중 — which agency read that day best; same quiet gauge language */
+.mrank {
+  max-width: 640px;
+}
+.mrank__row {
+  display: grid;
+  grid-template-columns: 14px 128px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.mrank__row + .mrank__row {
+  border-top: 1px solid rgba(23, 24, 28, 0.06);
+}
+.mrank__rank {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+.mrank__row:first-child .mrank__rank,
+.mrank__row:first-child .mrank__name {
+  color: var(--ink);
+  font-weight: 650;
+}
+.mrank__name {
+  font-size: 13px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mrank__track {
+  position: relative;
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(23, 24, 28, 0.07);
+}
+.mrank__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--p-mod);
+}
+.mrank__result {
+  font-size: 12px;
+  color: var(--ink-subtle);
+  white-space: nowrap;
+}
+.mrank__row:first-child .mrank__result {
+  color: var(--ink);
+  font-weight: 600;
+}
+.mrank__note {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  max-width: 56ch;
+}
 .retro__hunches {
   margin-top: 14px;
 }
@@ -1221,6 +1279,14 @@ body::after {
   .retro__brow {
     grid-template-columns: 118px 1fr 48px;
     gap: 10px;
+  }
+  .mrank__row {
+    grid-template-columns: 14px 118px 1fr;
+    gap: 8px 10px;
+  }
+  .mrank__result {
+    grid-column: 2 / 4;
+    margin-top: -3px;
   }
   .sheet__head {
     align-items: baseline;

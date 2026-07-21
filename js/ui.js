@@ -2,7 +2,7 @@
 // statistics — those live in api.js / stats.js. Keeping render pure-ish makes the
 // UI easy to reason about: same inputs → same markup.
 
-import { PRECIP_BUCKETS, CALIB_MIN_DAYS, CALIB_MIN_HOURS } from './config.js';
+import { PRECIP_BUCKETS, CALIB_MIN_DAYS, CALIB_MIN_HOURS, MODEL_LABELS } from './config.js';
 import { agreement } from './stats.js';
 import { pct, mm, ms, deg, hourOf, hourLabel, dayLabel, dateOf } from './format.js';
 
@@ -219,7 +219,7 @@ export function renderRetro(container, data, { pending = false } = {}) {
     );
     return;
   }
-  const { todayDate, date, days, actual, predicted, score, forecast, actualCells, pickCells, sel, settled, record, calib, onSelectDay, onSelectHour } = data;
+  const { todayDate, date, days, actual, predicted, score, forecast, actualCells, pickCells, sel, modelScores, settled, record, calib, onSelectDay, onSelectHour } = data;
   const parts = [head];
   const predByTime = new Map((predicted?.hours || []).map((h) => [h.time, h]));
   const dLabel = dayLabel(`${date}T00:00`, todayDate);
@@ -396,6 +396,33 @@ export function renderRetro(container, data, { pending = false } = {}) {
     );
   }
   // (그날의 총량·적중률·평균 확률은 위 요약 줄이 담당 — 문장 중복은 두지 않는다)
+
+  // (2.6) 기관별 적중 — 이날을 기관별로 따로 채점한 상위 3. 날짜 탭을 바꾸면
+  //       그날의 순위로 재계산된다. 모델 불일치가 핵심 정보인 앱답게, 어느
+  //       기관이 그날을 제대로 봤는지도 데이터로 보여준다.
+  if (modelScores?.length) {
+    parts.push(el('p', { class: 'retro__cap retro__cap--board', text: `기관별 적중 — 이날의 상위 3` }));
+    const rows = modelScores.slice(0, 3).map((s, i) =>
+      el('div', {
+        class: 'mrank__row',
+        title: `${MODEL_LABELS[s.model] || s.model} — 우세 시나리오 적중 ${s.hits}/${s.n}시간, 실제에 준 평균 확률 ${pct(s.meanProb)}`,
+      }, [
+        el('span', { class: 'mrank__rank num', text: String(i + 1) }),
+        el('span', { class: 'mrank__name', text: MODEL_LABELS[s.model] || s.model }),
+        el('span', { class: 'mrank__track' }, [
+          el('span', { class: 'mrank__fill', style: `width:${(s.hitRate * 100).toFixed(1)}%` }),
+        ]),
+        el('span', { class: 'mrank__result num', text: `${s.hits}/${s.n}시간 · ${pct(s.hitRate)}` }),
+      ]),
+    );
+    parts.push(el('div', { class: 'mrank' }, rows));
+    parts.push(
+      el('p', {
+        class: 'mrank__note',
+        text: `${modelScores.length}개 기관 각자의 우세 시나리오가 실제와 맞은 시간 비율 — 하루 순위는 크게 출렁입니다`,
+      }),
+    );
+  }
 
   // (2.7) 확률 성적표 — "N%라고 했을 때 실제로 그만큼 왔나"를 확률대별 한 줄씩.
   // 막대 = 실제 비 온 비율, 세로선 = 그때 말한 평균 확률: 겹칠수록 믿을 만한 확률.

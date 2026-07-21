@@ -58,11 +58,19 @@ export function parseEnsemble(json) {
   const windKeys = keys.filter((k) => k.startsWith('wind_speed_10m'));
   const tempKeys = keys.filter((k) => k.startsWith('temperature_2m'));
 
-  const models = new Set(precipKeys.map((k) => modelIdOf(k, 'precipitation')));
+  // precip keys grouped by agency, so each model can be scored on its own
+  // (기관별 적중) — the member key carries the model id it belongs to
+  const modelKeys = new Map();
+  for (const k of precipKeys) {
+    const m = modelIdOf(k, 'precipitation');
+    if (!modelKeys.has(m)) modelKeys.set(m, []);
+    modelKeys.get(m).push(k);
+  }
 
   const hours = times.map((time, i) => ({
     time, // local ISO string, e.g. "2026-07-08T15:00"
     precipMembers: precipKeys.map((k) => hourly[k][i]),
+    precipByModel: Object.fromEntries([...modelKeys].map(([m, ks]) => [m, ks.map((k) => hourly[k][i])])),
     windMembers: windKeys.map((k) => hourly[k][i]),
     tempMembers: tempKeys.map((k) => hourly[k][i]),
   }));
@@ -70,7 +78,7 @@ export function parseEnsemble(json) {
   return {
     hours,
     memberCount: precipKeys.length,
-    modelCount: models.size,
+    modelCount: modelKeys.size,
     elevation: json.elevation,
     utcOffsetSeconds: json.utc_offset_seconds,
   };

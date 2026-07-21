@@ -1,0 +1,35 @@
+# 매일 자정 직후(KST) 예보 분포·전날 실측을 data/*.csv에 적립.
+# 정적 PWA엔 백엔드가 없으므로 레포가 곧 데이터베이스 — 커밋되면 Pages로도 서빙되어
+# 앱이 나중에 이 아카이브를 직접 읽을 수 있다. 수집 로직: scripts/collect.mjs.
+name: collect-weather-data
+
+on:
+  schedule:
+    - cron: '10 15 * * *' # 15:10 UTC = 00:10 KST — 하루가 온전히 남은 시점의 예보
+  workflow_dispatch: {} # 수동 실행(테스트·빠진 날 보충)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Collect forecasts + actuals
+        run: node scripts/collect.mjs
+      - name: Commit ledger
+        run: |
+          git config user.name "weather-collector[bot]"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet && echo "no new rows" && exit 0
+          git commit -m "데이터 적립: $(date -u +%F) 예보 분포·실측 CSV (자동 수집)"
+          git push

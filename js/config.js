@@ -14,6 +14,18 @@ export const MODELS = [
   'bom_access_global', // Australian BOM — 18 members
 ];
 
+// Display names for the agencies behind each ensemble model (기관별 적중 rows).
+// Keys are the ids as they appear in RESPONSE member keys — these differ from
+// the request names above (실측 확인 2026-07-21: icon_seamless→icon_seamless_eps,
+// gfs_seamless→ncep_gefs_seamless 등). Unknown ids fall back to the raw id.
+export const MODEL_LABELS = {
+  ecmwf_ifs025_ensemble: 'ECMWF · 유럽',
+  icon_seamless_eps: 'ICON · 독일 DWD',
+  ncep_gefs_seamless: 'GEFS · 미국 NOAA',
+  gem_global_ensemble: 'GEM · 캐나다',
+  bom_access_global_ensemble: 'ACCESS · 호주 BOM',
+};
+
 // Precipitation intensity buckets, in mm per hour. The whole app is built around
 // classifying every ensemble member into exactly one of these, then counting.
 // Thresholds follow common hourly-rain descriptors (KMA/WMO-ish): below 0.1 mm is

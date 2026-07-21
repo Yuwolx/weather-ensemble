@@ -172,6 +172,17 @@ check('tapping another retro hour moves the selection and rebuilds the detail',
   d.querySelector('#retro .retro__col[aria-pressed="true"]')?.dataset.time === retroCols[2]?.dataset.time &&
   d.querySelectorAll('#retro .retro__brow').length === 4);
 
+// 기관별 적중: yesterday always has the per-agency breakdown (archive fallback),
+// so the top-3 ranking must render with real agency labels and per-day scores
+const mrows = d.querySelectorAll('#retro .mrank__row');
+check('기관별 적중 top-3 renders (archived forecast carries per-agency data)',
+  mrows.length >= 3, `${mrows.length} rows`);
+check('each agency row reads "N/M시간 · P%"',
+  [...mrows].every((r) => /\d+\/\d+시간 · \d+%/.test(r.querySelector('.mrank__result')?.textContent || '')));
+check('agency labels resolved (no raw model ids leaking)',
+  [...mrows].some((r) => /·/.test(r.querySelector('.mrank__name')?.textContent || '')),
+  [...mrows].map((r) => r.querySelector('.mrank__name')?.textContent).join(', '));
+
 console.log('\n' + report.join('\n'));
 console.log(`\n지역: ${txt('#vRegion')}`);
 console.log(`보드: ${txt('#board .board__when')} — 우세 ${txt('#board .scenario.is-lead .scenario__label')} ${txt('#board .scenario.is-lead .scenario__pct')}`);

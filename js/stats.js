@@ -85,6 +85,9 @@ export function analyzeHour(hour, buckets, rainThreshold) {
     wind: spread(hour.windMembers),
     temp: spread(hour.tempMembers || []),
     agree: agreement(dist),
+    // per-agency view rides along when the raw hour carries it — snapshotted
+    // for 돌아보기's 기관별 적중, absent for data shapes that predate it
+    models: hour.precipByModel ? perModelDistributions(hour.precipByModel, buckets) : undefined,
   };
 }
 
@@ -192,6 +195,57 @@ export function retroVerdict(fraction, actualMm, buckets) {
     }
   }
   return { actualKey, dominantKey, hit: actualKey === dominantKey, prob: fraction[actualKey] };
+}
+
+// ---- 기관별 채점 -------------------------------------------------------------
+// The ensemble's whole premise is independent agencies disagreeing — so let each
+// agency be scored on its own: bucket its own members per hour, then count how
+// often its dominant scenario matched reality.
+
+// {modelId: [mm...]} → {modelId: {fraction, n}}; agencies with no valid members
+// are dropped rather than scored on nothing.
+export function perModelDistributions(precipByModel, buckets) {
+  const out = {};
+  for (const [model, members] of Object.entries(precipByModel || {})) {
+    const d = precipDistribution(members, buckets);
+    if (d.n > 0) out[model] = { fraction: d.fraction, n: d.n };
+  }
+  return out;
+}
+
+// Score one day per agency: hitRate = share of checkable hours where the
+// agency's own dominant scenario happened; meanProb = the probability it gave
+// to what actually occurred (tie-breaker — rewards honest hedging).
+export function modelDayScores(hours, actualsByTime, buckets) {
+  const acc = new Map();
+  for (const h of hours) {
+    if (!h.models) continue;
+    if (!actualsByTime.has(h.time)) continue;
+    const mm = actualsByTime.get(h.time);
+    if (!isNum(mm)) continue;
+    const actualKey = classifyPrecip(mm, buckets);
+    for (const [model, dist] of Object.entries(h.models)) {
+      const f = dist.fraction;
+      if (!f) continue;
+      let domKey = null;
+      let max = -1;
+      for (const b of buckets) {
+        const v = f[b.key] ?? 0;
+        if (v > max) {
+          max = v;
+          domKey = b.key;
+        }
+      }
+      const a = acc.get(model) || { model, n: 0, hits: 0, probSum: 0 };
+      a.n += 1;
+      if (domKey === actualKey) a.hits += 1;
+      a.probSum += f[actualKey] ?? 0;
+      acc.set(model, a);
+    }
+  }
+  return [...acc.values()]
+    .map((a) => ({ model: a.model, n: a.n, hits: a.hits, hitRate: a.hits / a.n, meanProb: a.probSum / a.n }))
+    .sort((x, y) => y.hitRate - x.hitRate || y.meanProb - x.meanProb);
 }
 
 // ---- 확률 성적표 (calibration) ----------------------------------------------

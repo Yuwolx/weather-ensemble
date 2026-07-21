@@ -11,6 +11,13 @@ import { addDays } from './format.js';
 const PREFIX = 'retro:';
 const keyOf = (region, date) => `${PREFIX}${region.lat.toFixed(2)},${region.lon.toFixed(2)}:${date}`;
 
+// Fractions rounded to 3 decimals for storage — float tails would triple the
+// snapshot's byte size for no informational gain.
+const roundFrac = (fraction) =>
+  Object.fromEntries(Object.entries(fraction).map(([k, v]) => [k, Math.round(v * 1000) / 1000]));
+const roundModels = (models) =>
+  models && Object.fromEntries(Object.entries(models).map(([m, d]) => [m, { n: d.n, fraction: roundFrac(d.fraction) }]));
+
 // First-seen wins: the earliest save is the real forecast; later runs would
 // quietly rewrite history.
 export function saveDaySnapshots(region, byDay, todayDate) {
@@ -20,7 +27,13 @@ export function saveDaySnapshots(region, byDay, todayDate) {
       if (localStorage.getItem(k)) continue;
       const snap = {
         savedOn: todayDate,
-        hours: hours.map((a) => ({ time: a.time, fraction: a.dist.fraction, n: a.dist.n })),
+        hours: hours.map((a) => ({
+          time: a.time,
+          fraction: a.dist.fraction,
+          n: a.dist.n,
+          // per-agency odds ride along so 돌아보기 can rank agencies later
+          ...(a.models ? { models: roundModels(a.models) } : {}),
+        })),
       };
       localStorage.setItem(k, JSON.stringify(snap));
     } catch {

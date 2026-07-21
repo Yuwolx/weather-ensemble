@@ -4,7 +4,7 @@
 import { REGIONS } from './regions.js';
 import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS, CALIB_BIN_EDGES, ACTUALS_PAST_DAYS } from './config.js';
 import { loadEnsemble, loadActuals, loadKma, getCurrentPosition, nearestRegion } from './api.js';
-import { analyzeHour, dayMood, agreement, classifyPrecip, precipDistribution, pickRetroHour, retroVerdict, summarizeActuals, settlePicks, forecastScore, calibrationEntries, calibrationReport, brierScore } from './stats.js';
+import { analyzeHour, dayMood, agreement, classifyPrecip, precipDistribution, perModelDistributions, modelDayScores, pickRetroHour, retroVerdict, summarizeActuals, settlePicks, forecastScore, calibrationEntries, calibrationReport, brierScore } from './stats.js';
 import { createRain } from './rain.js';
 import { saveDaySnapshots, getSnapshot, savePick, getPicks, appendRecord, getRecord, regionKeyOf, appendCalibration, hasSettledHistory } from './snapshots.js';
 import { dateOf, addDays } from './format.js';
@@ -88,7 +88,7 @@ async function selectRegion(region) {
       .filter((h) => dateOf(h.time) === yDate)
       .map((h) => {
         const d = precipDistribution(h.precipMembers, PRECIP_BUCKETS);
-        return { time: h.time, fraction: d.fraction, n: d.n };
+        return { time: h.time, fraction: d.fraction, n: d.n, models: perModelDistributions(h.precipByModel, PRECIP_BUCKETS) };
       });
 
     const byDay = new Map();
@@ -225,7 +225,15 @@ async function refreshRetro() {
       if (!predicted?.hours?.length) continue;
       const dayActuals = new Map([...actuals].filter(([t]) => dateOf(t) === date));
       if (!dayActuals.size) continue;
-      days.push({ date, predicted, actuals: dayActuals, picks: getPicks(region, date) });
+      // per-agency hours for 기관별 적중: prefer whatever the predicted hours
+      // carry; an old model-less snapshot of yesterday can still fall back to
+      // the archived forecast, which always has the per-agency breakdown
+      const modelHours = predicted.hours.some((h) => h.models)
+        ? predicted.hours
+        : back === 1 && state.yesterdayDists.some((h) => h.models)
+          ? state.yesterdayDists
+          : null;
+      days.push({ date, predicted, modelHours, actuals: dayActuals, picks: getPicks(region, date) });
     }
     if (!days.length) return;
 
@@ -293,6 +301,7 @@ function renderRetroSection() {
       ? actualCells.map(({ time }) => ({ time, picked: day.picks[time] || null }))
       : null,
     sel,
+    modelScores: day.modelHours ? modelDayScores(day.modelHours, day.actuals, PRECIP_BUCKETS) : [],
     settled: settlePicks(day.picks, day.actuals, PRECIP_BUCKETS),
     record: r.record,
     calib: r.calib,

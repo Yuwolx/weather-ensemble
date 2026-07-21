@@ -135,7 +135,24 @@
   성적표·예감 통산 유지. main.js에 state.retro(days/selDate/selHour) +
   renderRetroSection 분리, 예감 채점도 지난 7일 전부 정산(dedup이 재방문 무해화).
   폰: retroscroll 가로 스크롤(스트립·리본·눈금 정렬 유지).
-- [x] 단위 테스트 39개, 렌더 검증 43개 통과 + 실브라우저(맥북 M5, Playwright+Chrome headless,
+- [x] **기관별 적중(2026-07-21, 사용자 "기관별 적중률·일자별 상위 3·날짜 전환")** —
+  돌아보기 날짜 탭과 연동: 그날을 기관별로 따로 채점(`perModelDistributions`+
+  `modelDayScores`, 순수·TDD — hitRate 1차, 실제에 준 meanProb로 동률 판정)해 상위 3
+  게이지 행. 파이프라인: parseEnsemble이 `precipByModel` 보존 → analyzeHour `models`
+  동승 → 스냅샷에도 저장(3자리 반올림; 옛 스냅샷 날은 섹션 정직하게 부재, 어제는
+  보관 예보로 항상 가능). **[실측 발견] 응답 멤버 키의 모델 id는 요청명과 다름**
+  (icon_seamless→`icon_seamless_eps`, gfs→`ncep_gefs_seamless`, ecmwf/gem은 `_ensemble`
+  접미) — `MODEL_LABELS`는 응답 id 기준, 미지 id는 원문 표기. BOM은 간헐 결측 실측됨.
+- [x] **데이터 적립 파이프라인(2026-07-21, 사용자 "꾸준히 모아두자, CSV라도")** —
+  백엔드 없는 정적 앱이므로 **레포가 곧 DB**: GitHub Actions 크론(00:10 KST,
+  `.github/workflows/collect.yml`)이 `scripts/collect.mjs`(앱의 순수 모듈 재사용)로
+  즐겨찾기 2곳의 ①오늘+내일 시간별 시나리오 분포(기관별+ensemble 통합, 3자리 반올림)
+  ②전날 실측을 `data/forecasts-YYYY-MM.csv`·`data/actuals-YYYY-MM.csv`에 append.
+  월별 파일, run_date+region 마커로 멱등(재실행 중복 없음), 수동 트리거 가능
+  (workflow_dispatch). 커밋되면 Pages로도 서빙 → 앱이 아카이브를 읽는 확장이 다음 후보.
+  ※ 공개 레포 스케줄 워크플로는 60일간 커밋 없으면 자동 비활성화됨(수집 커밋이 매일
+  생기므로 실질 무관).
+- [x] 단위 테스트 42개, 렌더 검증 46개 통과 + 실브라우저(맥북 M5, Playwright+Chrome headless,
   데스크톱/폰, 날짜 탭 전환·시각 선택·상세 보드 확인). ※ 이 기기엔 dev-browser 없음 —
   `npx playwright`(chrome 채널)로 검증하는 방식이 실전 확인됨. `npm install` 선행 필요(jsdom).
 - ⚠ **sw.js 교훈**: SW network-first여도 브라우저 HTTP 캐시가 모듈 버전을 섞을 수 있음
@@ -160,7 +177,8 @@
 ## 다음 후보 (무료 서비스 방향 기준, 업데이트)
 
 1. ~~회고 확장 — 누적 캘리브레이션·브라이어~~ → **확률 성적표+종합 점수로 완료(2026-07-21).**
-   남은 확장: 지역별 분리 보기, 기간 확대(원장 캡 상향), snapshots.js 스토리지 단위 테스트.
+   남은 확장: **앱이 `data/*.csv` 아카이브를 읽어** 기기 무관 장기 회고(기관별 통산 순위,
+   지역별 성적), 원장 캡 상향, snapshots.js 스토리지 단위 테스트.
 2. 비/눈 분리(겨울), 기상청 **공식 발표** 예보(예보관 판단) 얹기는 공공데이터 키+프록시(Actions
    cron→정적 JSON) 필요 — KIM 수치모델 마커는 이미 있음(2026-07-10).
 - 위치: `Desktop\취업진로\weather-ensemble` · 원격 **github.com/Yuwolx/weather-ensemble (private)**
