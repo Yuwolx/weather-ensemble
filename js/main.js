@@ -2,11 +2,11 @@
 // Business logic lives in stats.js; rendering in ui.js; this file connects them.
 
 import { REGIONS } from './regions.js';
-import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS } from './config.js';
-import { loadEnsemble, loadActualsYesterday, loadKma, getCurrentPosition, nearestRegion } from './api.js';
-import { analyzeHour, dayMood, agreement, classifyPrecip, precipDistribution, pickRetroHour, retroVerdict, summarizeActuals, settlePicks, forecastScore } from './stats.js';
+import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS, CALIB_BIN_EDGES, ACTUALS_PAST_DAYS } from './config.js';
+import { loadEnsemble, loadActuals, loadKma, getCurrentPosition, nearestRegion } from './api.js';
+import { analyzeHour, dayMood, agreement, classifyPrecip, precipDistribution, pickRetroHour, retroVerdict, summarizeActuals, settlePicks, forecastScore, calibrationEntries, calibrationReport } from './stats.js';
 import { createRain } from './rain.js';
-import { saveDaySnapshots, getSnapshot, savePick, getPicks, appendRecord, getRecord, regionKeyOf } from './snapshots.js';
+import { saveDaySnapshots, getSnapshot, savePick, getPicks, appendRecord, getRecord, regionKeyOf, appendCalibration } from './snapshots.js';
 import { dateOf, addDays } from './format.js';
 import * as ui from './ui.js';
 
@@ -202,7 +202,7 @@ async function refreshRetro() {
   ui.renderRetro(refs.retro, null); // instant baseline; upgraded below
   const yesterday = addDays(state.todayDate, -1);
   try {
-    const actuals = await loadActualsYesterday(region.lat, region.lon);
+    const actuals = await loadActuals(region.lat, region.lon);
     if (state.region !== region) return; // user moved on mid-fetch
     const yActuals = new Map([...actuals].filter(([t]) => dateOf(t) === yesterday));
     if (!yActuals.size) return;
@@ -229,6 +229,18 @@ async function refreshRetro() {
       }
     }
 
+    // (2.7) 확률 성적표: settle every past day we have both a forecast and
+    // actuals for — yesterday always, older days when a snapshot survives.
+    const calEntries = [];
+    for (let back = 1; back <= ACTUALS_PAST_DAYS; back++) {
+      const dDate = addDays(state.todayDate, -back);
+      const hours = back === 1 ? predicted?.hours : getSnapshot(region, dDate)?.hours;
+      if (!hours?.length) continue;
+      const dayActuals = new Map([...actuals].filter(([t]) => dateOf(t) === dDate));
+      calEntries.push(...calibrationEntries(hours, dayActuals, RAIN_THRESHOLD_MM));
+    }
+    const calib = calibrationReport(appendCalibration(regionKeyOf(region), calEntries), CALIB_BIN_EDGES);
+
     // (3) the user's hunches, settled once into the running record
     const picks = getPicks(region, yesterday);
     const settled = settlePicks(picks, yActuals, PRECIP_BUCKETS);
@@ -248,6 +260,7 @@ async function refreshRetro() {
       pickCells: Object.keys(picks).length ? actualCells.map(({ time }) => ({ time, picked: picks[time] || null })) : null,
       settled,
       record,
+      calib,
     });
   } catch {
     /* actuals unavailable — the invitation stays */

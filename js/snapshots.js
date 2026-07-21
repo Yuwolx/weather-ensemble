@@ -110,3 +110,24 @@ export function getRecord() {
 }
 
 export const regionKeyOf = (region) => `${region.lat.toFixed(2)},${region.lon.toFixed(2)}`;
+
+// ---- 확률 성적표 원장 — settled "said p% / did it rain" hours ----------------
+// One flat ledger across regions (a probability is a probability wherever it was
+// stated). Deduped by region+hour so re-visits and snapshot/archive overlap never
+// double-count. Capped: ~2000 hours ≈ 80+ days of single-region records.
+const CALIB_KEY = 'calib:v1';
+
+export function appendCalibration(regionKey, entries) {
+  try {
+    const rec = JSON.parse(localStorage.getItem(CALIB_KEY) || '[]');
+    const seen = new Set(rec.map((r) => `${r.rk}|${r.time}`));
+    for (const e of entries) {
+      if (!seen.has(`${regionKey}|${e.time}`)) rec.push({ rk: regionKey, time: e.time, p: e.p, wet: e.wet });
+    }
+    const capped = rec.slice(-2000);
+    localStorage.setItem(CALIB_KEY, JSON.stringify(capped));
+    return capped;
+  } catch {
+    return entries.map((e) => ({ rk: regionKey, ...e }));
+  }
+}

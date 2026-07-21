@@ -855,6 +855,81 @@ body::after {
   color: var(--ink-faint);
 }
 
+/* 확률 성적표 — said probability vs what actually happened, one gauge per bin.
+   Same quiet instrument language as the scenario board: hairline rows, a thin
+   track, no boxes. The tick (said) sitting on the fill (actual) IS the message. */
+.calib {
+  margin-top: 4px;
+  max-width: 640px;
+}
+.calib__row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(23, 24, 28, 0.06);
+}
+.calib__row:first-child {
+  border-top: none;
+}
+.calib__row--thin {
+  opacity: 0.45;
+}
+.calib__said {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.calib__track {
+  position: relative;
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(23, 24, 28, 0.07);
+}
+.calib__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--p-mod);
+}
+.calib__tick {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+.calib__result {
+  font-size: 12px;
+  color: var(--ink-subtle);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.calib__how {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  max-width: 56ch;
+}
+.calib__wait {
+  font-size: 13.5px;
+  color: var(--ink-subtle);
+}
+@media (max-width: 560px) {
+  .calib__row {
+    grid-template-columns: 56px 1fr;
+    gap: 10px 14px;
+  }
+  .calib__result {
+    grid-column: 2;
+    margin-top: -2px;
+  }
+}
+
 /* Method footer */
 .method {
   margin-top: 40px;

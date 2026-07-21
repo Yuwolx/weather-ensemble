@@ -24,6 +24,17 @@ process.on('unhandledRejection', (r) => pushErr('unhandledRejection: ' + (r?.sta
 const origErr = console.error;
 console.error = (...a) => { pushErr(a.join(' ')); origErr(...a); };
 
+// seed a 3-day calibration ledger so the 확률 성적표 (opens at 3+ days of records)
+// can be exercised on a cold jsdom boot; today's settle appends on top of this
+const calSeed = [];
+const dayAgo = (off) => new Date(Date.now() - off * 864e5).toISOString().slice(0, 10);
+for (const off of [2, 3, 4]) {
+  for (let h = 0; h < 8; h++) {
+    calSeed.push({ rk: 'seed', time: `${dayAgo(off)}T0${h}:00`, p: h / 10, wet: h >= 6 });
+  }
+}
+dom.window.localStorage.setItem('calib:v1', JSON.stringify(calSeed));
+
 await import('../js/main.js');
 
 // wait for the async selectRegion() → render to finish
@@ -111,6 +122,26 @@ const leadOfCol = (i) => {
 };
 const rainStates = [...d.querySelectorAll('#stripCols .col')].map((_, i) => leadOfCol(i));
 check('rain art reacts to selected hour (some state observed)', rainStates.length > 0, rainStates.join(' '));
+
+// 확률 성적표: renders async once actuals arrive — wait for the rows, then check
+// the gauge anatomy (fill = actual rate, tick = said probability) and honest copy
+const calRows = await (async () => {
+  for (let i = 0; i < 50; i++) {
+    const r = document.querySelectorAll('#retro .calib__row');
+    if (r.length) return r;
+    await new Promise((r2) => setTimeout(r2, 200));
+  }
+  return document.querySelectorAll('#retro .calib__row');
+})();
+check('확률 성적표 renders once 3+ days of records exist', calRows.length >= 1, `${calRows.length} rows`);
+check('every calib row has a fill and a said-probability tick',
+  [...calRows].every((r) => r.querySelector('.calib__fill') && r.querySelector('.calib__tick')));
+check('calib rows read "N시간 중 M시간 비 · P%"',
+  [...calRows].every((r) => /\d+시간 중 \d+시간 비 · \d+%/.test(r.querySelector('.calib__result')?.textContent || '')));
+check('calib explainer states the reading rule',
+  /막대.*세로선/.test(txt('#retro .calib__how') || ''), txt('#retro .calib__how'));
+check('calibration ledger persisted and deduped',
+  (() => { try { return JSON.parse(dom.window.localStorage.getItem('calib:v1')).length >= calSeed.length; } catch { return false; } })());
 
 console.log('\n' + report.join('\n'));
 console.log(`\n지역: ${txt('#vRegion')}`);

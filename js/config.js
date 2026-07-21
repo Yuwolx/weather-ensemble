@@ -43,6 +43,18 @@ export const MOOD_THRESHOLDS = { rainy: 0.5, unsettled: 0.2 };
 // How many days of forecast snapshots to keep for 돌아보기 (localStorage).
 export const RETRO_KEEP_DAYS = 14;
 
+// 확률 성적표 (calibration): "N%라고 말했을 때 실제로 그만큼 왔나".
+// Said-probability bins (edges, fractions); the top edge is inclusive so p=1.0 counts.
+export const CALIB_BIN_EDGES = [0, 0.2, 0.4, 0.6, 0.8, 1];
+// The report card opens only after this many distinct days of records — earlier a
+// single day's correlated hours would masquerade as a track record.
+export const CALIB_MIN_DAYS = 3;
+// Bins with fewer checked hours than this render dimmed ("아직 기록이 적음").
+export const CALIB_MIN_HOURS = 8;
+// How many past days of actuals to fetch each visit — lets stored snapshots from
+// skipped days still get settled into the ledger.
+export const ACTUALS_PAST_DAYS = 7;
+
 // Wind is secondary: we report the spread (median + range) rather than bucketing.
 // This threshold only flags "notably windy" hours in the plain-language read (m/s).
 export const WINDY_THRESHOLD_MS = 8;

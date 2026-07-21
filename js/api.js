@@ -1,7 +1,7 @@
 // Data access: talk to Open-Meteo's ensemble API and reshape its very wide response
 // into something the stats layer can consume. Also owns geolocation. No DOM here.
 
-import { MODELS, FORECAST_DAYS, ENSEMBLE_ENDPOINT, KMA_MODEL, FORECAST_ENDPOINT } from './config.js';
+import { MODELS, FORECAST_DAYS, ENSEMBLE_ENDPOINT, KMA_MODEL, FORECAST_ENDPOINT, ACTUALS_PAST_DAYS } from './config.js';
 
 // Build the request. One call returns every member of every model as its own
 // hourly series, e.g. hourly["precipitation_member07_ecmwf_ifs025"].
@@ -106,16 +106,17 @@ export async function loadKma(lat, lon) {
   }
 }
 
-// What actually fell yesterday: hourly precipitation from the forecast API's
-// assimilation window (past_days). This is reanalysis-grade "실측 근사" — good
-// enough to settle "어느 시나리오가 이겼나", available without delay. Returns a
-// Map of local-ISO-hour → mm.
-export async function loadActualsYesterday(lat, lon) {
+// What actually fell in the recent past: hourly precipitation from the forecast
+// API's assimilation window (past_days). This is reanalysis-grade "실측 근사" —
+// good enough to settle "어느 시나리오가 이겼나", available without delay.
+// Several days deep so snapshots from skipped days still get settled into the
+// 확률 성적표 ledger. Returns a Map of local-ISO-hour → mm.
+export async function loadActuals(lat, lon) {
   const p = new URLSearchParams({
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
     hourly: 'precipitation',
-    past_days: '1',
+    past_days: String(ACTUALS_PAST_DAYS),
     forecast_days: '1',
     timezone: 'auto',
   });

@@ -2,7 +2,7 @@
 // statistics — those live in api.js / stats.js. Keeping render pure-ish makes the
 // UI easy to reason about: same inputs → same markup.
 
-import { PRECIP_BUCKETS } from './config.js';
+import { PRECIP_BUCKETS, CALIB_MIN_DAYS, CALIB_MIN_HOURS } from './config.js';
 import { agreement } from './stats.js';
 import { pct, mm, ms, deg, hourOf, hourLabel, dayLabel, dateOf } from './format.js';
 
@@ -218,7 +218,7 @@ export function renderRetro(container, data) {
     );
     return;
   }
-  const { todayDate, actual, predicted, score, forecast, actualCells, pickCells, settled, record } = data;
+  const { todayDate, actual, predicted, score, forecast, actualCells, pickCells, settled, record, calib } = data;
   const parts = [head];
   const predByTime = new Map((predicted?.hours || []).map((h) => [h.time, h.fraction]));
 
@@ -335,6 +335,47 @@ export function renderRetro(container, data) {
         `의 확률을 주고 있었습니다.`,
       ]),
     );
+  }
+
+  // (2.7) 확률 성적표 — "N%라고 했을 때 실제로 그만큼 왔나"를 확률대별 한 줄씩.
+  // 막대 = 실제 비 온 비율, 세로선 = 그때 말한 평균 확률: 겹칠수록 믿을 만한 확률.
+  // 3일치가 모이기 전엔 성적표 대신 조용한 초대문만 — 하루의 시간들은 함께
+  // 움직여서, 하루치로 성적을 말하면 그게 또 하나의 거짓 헤드라인이 된다.
+  if (calib && calib.days > 0) {
+    if (calib.days < CALIB_MIN_DAYS) {
+      parts.push(
+        el('p', {
+          class: 'retro__line calib__wait',
+          text: `확률 성적표는 기록이 ${CALIB_MIN_DAYS}일 모이면 열립니다 — 지금까지 ${calib.days}일.`,
+        }),
+      );
+    } else {
+      parts.push(el('p', { class: 'retro__cap', text: `확률 성적표 — 지난 ${calib.days}일의 기록` }));
+      const rows = calib.bins
+        .filter((b) => b.n > 0)
+        .map((b) => {
+          const thin = b.n < CALIB_MIN_HOURS;
+          const saidTxt = `${Math.round(b.lo * 100)}~${Math.round(b.hi * 100)}%`;
+          return el('div', {
+            class: thin ? 'calib__row calib__row--thin' : 'calib__row',
+            title: thin ? `아직 ${b.n}시간뿐이라 참고만 해주세요` : `'비 올 확률 ${saidTxt}'라고 말한 ${b.n}시간 — 실제 비 ${b.wet}시간`,
+          }, [
+            el('span', { class: 'calib__said num', text: saidTxt }),
+            el('span', { class: 'calib__track' }, [
+              el('span', { class: 'calib__fill', style: `width:${(b.wetRate * 100).toFixed(1)}%` }),
+              el('span', { class: 'calib__tick', style: `left:${(b.avgP * 100).toFixed(1)}%` }),
+            ]),
+            el('span', { class: 'calib__result num', text: `${b.n}시간 중 ${b.wet}시간 비 · ${pct(b.wetRate)}` }),
+          ]);
+        });
+      parts.push(el('div', { class: 'calib' }, rows));
+      parts.push(
+        el('p', {
+          class: 'calib__how',
+          text: '막대 = 실제로 비가 온 비율, 세로선 = 그때 말했던 평균 확률. 둘이 가까울수록 이 앱의 확률은 액면 그대로입니다.',
+        }),
+      );
+    }
   }
 
   // (3) 당신의 예감 — settled hunches + running hit rate

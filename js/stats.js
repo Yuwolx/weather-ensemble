@@ -194,6 +194,60 @@ export function retroVerdict(fraction, actualMm, buckets) {
   return { actualKey, dominantKey, hit: actualKey === dominantKey, prob: fraction[actualKey] };
 }
 
+// ---- 확률 성적표 (calibration) ----------------------------------------------
+// "비 올 확률 30%라고 말한 시간들을 모아 보면, 실제로도 10번 중 3번쯤 왔나?"
+// Entries are the ledger's unit: one checkable hour → the rain probability the
+// forecast stated (1 - dry fraction) and whether rain actually fell.
+
+export function calibrationEntries(predHours, actualsByTime, threshold) {
+  const out = [];
+  for (const h of predHours) {
+    if (!actualsByTime.has(h.time)) continue;
+    const mm = actualsByTime.get(h.time);
+    if (!isNum(mm)) continue;
+    const dry = h.fraction?.dry;
+    if (!isNum(dry)) continue;
+    out.push({ time: h.time, p: 1 - dry, wet: mm >= threshold });
+  }
+  return out;
+}
+
+// Fold ledger entries into said-probability bins. Each bin answers: across the
+// hours we said "lo–hi%", what share actually got rain (wetRate) vs what we said
+// on average (avgP)? days counts distinct dates — the honest sample unit, since
+// hours within one day rise and fall together.
+export function calibrationReport(entries, edges) {
+  const bins = [];
+  for (let i = 0; i < edges.length - 1; i++) {
+    bins.push({ lo: edges[i], hi: edges[i + 1], n: 0, wet: 0, pSum: 0, dates: new Set() });
+  }
+  const allDates = new Set();
+  for (const e of entries) {
+    if (!isNum(e.p)) continue;
+    const top = edges[edges.length - 1];
+    const b = e.p >= top ? bins[bins.length - 1] : bins.find((x) => e.p >= x.lo && e.p < x.hi);
+    if (!b) continue;
+    b.n += 1;
+    if (e.wet) b.wet += 1;
+    b.pSum += e.p;
+    b.dates.add(e.time.slice(0, 10));
+    allDates.add(e.time.slice(0, 10));
+  }
+  return {
+    n: bins.reduce((s, b) => s + b.n, 0),
+    days: allDates.size,
+    bins: bins.map((b) => ({
+      lo: b.lo,
+      hi: b.hi,
+      n: b.n,
+      wet: b.wet,
+      days: b.dates.size,
+      avgP: b.n ? b.pSum / b.n : null,
+      wetRate: b.n ? b.wet / b.n : null,
+    })),
+  };
+}
+
 // How much the models agree, derived from an existing precip distribution: the
 // dominant scenario and the share of members backing it. share≈1 → strong consensus;
 // share near 1/#buckets → the models are all over the place (which is itself the

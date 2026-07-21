@@ -156,6 +156,81 @@ test('retroVerdict: a small probability winning is an upset, not a betrayal', ()
   assert.ok(Math.abs(v.prob - 0.08) < 1e-9);
 });
 
+// 확률 성적표 (calibration): "N%라고 말했을 때 실제로 그만큼 왔나"를 확률대별로.
+// 시간·지역이 섞인 원장(ledger) 항목을 구간에 담아 말한 확률 vs 실제 비율을 대조한다.
+import { calibrationEntries, calibrationReport } from '../js/stats.js';
+import { CALIB_BIN_EDGES } from '../js/config.js';
+
+test('calibrationEntries: each checkable hour becomes {p = 비 올 확률, wet}', () => {
+  const hours = [
+    snapHour('2026-07-09T10:00', 0.8, 0.2, 0, 0), // said 20%
+    snapHour('2026-07-09T11:00', 0.3, 0.5, 0.2, 0), // said 70%
+  ];
+  const actuals = new Map([
+    ['2026-07-09T10:00', 0], // stayed dry
+    ['2026-07-09T11:00', 2.0], // rained
+  ]);
+  const e = calibrationEntries(hours, actuals, RAIN_THRESHOLD_MM);
+  assert.equal(e.length, 2);
+  assert.ok(Math.abs(e[0].p - 0.2) < 1e-9);
+  assert.equal(e[0].wet, false);
+  assert.ok(Math.abs(e[1].p - 0.7) < 1e-9);
+  assert.equal(e[1].wet, true);
+});
+
+test('calibrationEntries: hours without actuals or fractions are skipped, not guessed', () => {
+  const hours = [
+    snapHour('2026-07-09T10:00', 0.8, 0.2, 0, 0), // no actual
+    { time: '2026-07-09T11:00', fraction: null, n: 0 }, // no forecast
+  ];
+  const actuals = new Map([['2026-07-09T11:00', 1.0], ['2026-07-09T12:00', null]]);
+  assert.equal(calibrationEntries(hours, actuals, RAIN_THRESHOLD_MM).length, 0);
+});
+
+test('calibrationEntries: the 0.1mm boundary counts as rain (same line as everywhere)', () => {
+  const e = calibrationEntries(
+    [snapHour('2026-07-09T10:00', 0.5, 0.5, 0, 0)],
+    new Map([['2026-07-09T10:00', 0.1]]),
+    RAIN_THRESHOLD_MM,
+  );
+  assert.equal(e[0].wet, true);
+});
+
+test('calibrationReport: bins said-probability, counts wet hours and distinct days', () => {
+  const entries = [
+    { time: '2026-07-07T10:00', p: 0.3, wet: false },
+    { time: '2026-07-07T11:00', p: 0.35, wet: true },
+    { time: '2026-07-08T10:00', p: 0.25, wet: false },
+    { time: '2026-07-08T11:00', p: 0.9, wet: true },
+    { time: '2026-07-09T10:00', p: 0.05, wet: false },
+  ];
+  const r = calibrationReport(entries, CALIB_BIN_EDGES);
+  assert.equal(r.n, 5);
+  assert.equal(r.days, 3);
+  const b2040 = r.bins.find((b) => b.lo === 0.2 && b.hi === 0.4);
+  assert.equal(b2040.n, 3);
+  assert.equal(b2040.wet, 1);
+  assert.equal(b2040.days, 2);
+  assert.ok(Math.abs(b2040.avgP - 0.3) < 1e-9);
+  assert.ok(Math.abs(b2040.wetRate - 1 / 3) < 1e-9);
+});
+
+test('calibrationReport: p=1.0 lands in the top bin, empty bins report n=0 with null rates', () => {
+  const r = calibrationReport([{ time: '2026-07-09T10:00', p: 1, wet: true }], CALIB_BIN_EDGES);
+  const top = r.bins[r.bins.length - 1];
+  assert.equal(top.n, 1);
+  assert.equal(top.wetRate, 1);
+  assert.equal(r.bins[0].n, 0);
+  assert.equal(r.bins[0].wetRate, null);
+  assert.equal(r.bins[0].avgP, null);
+});
+
+test('calibrationReport: no entries is an empty report, not a crash', () => {
+  const r = calibrationReport([], CALIB_BIN_EDGES);
+  assert.equal(r.n, 0);
+  assert.equal(r.days, 0);
+});
+
 test('classifyPrecip puts values in the right bucket (half-open [min,max))', () => {
   assert.equal(classifyPrecip(0, PRECIP_BUCKETS), 'dry');
   assert.equal(classifyPrecip(0.09, PRECIP_BUCKETS), 'dry');

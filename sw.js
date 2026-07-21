@@ -2,7 +2,7 @@
 // Strategy: network-first for our own files (so updates always show, no staleness),
 // falling back to cache when offline. Weather API calls are never cached — they
 // must be live. Bump CACHE on each deploy that changes the app shell.
-const CACHE = 'wx-ensemble-v4'; // v4: 돌아보기·레인아트 — rain.js/snapshots.js 추가(누락 시 오프라인 부팅 깨짐)
+const CACHE = 'wx-ensemble-v5'; // v5: 확률 성적표(캘리브레이션) — stats/ui/main/config/css 변경
 const ASSETS = [
   './',
   './index.html',
