@@ -81,10 +81,11 @@ export function createRain(canvas) {
     raf = 0;
     ctx.clearRect(0, 0, w, h);
   }
-  document.addEventListener('visibilitychange', () => {
+  const onVisibility = () => {
     if (document.hidden) stop();
     else if (preset) start();
-  });
+  };
+  document.addEventListener('visibilitychange', onVisibility);
 
   return {
     set(intensity) {
@@ -99,6 +100,7 @@ export function createRain(canvas) {
     destroy() {
       stop();
       window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', onVisibility);
     },
   };
 }

@@ -18,7 +18,7 @@ const state = {
   activeDay: null,
   hours: [], // byDay.get(activeDay)
   selected: 0, // index within `hours`
-  picked: null, // an ephemeral scenario highlight for the selected hour (no storage)
+  picked: null, // the selected hour's declared hunch (persisted via savePick)
   meta: null,
   todayDate: null,
   nowTime: null,

@@ -111,7 +111,14 @@
   열립니다 — 지금까지 N일" 초대문(하루의 시간들은 함께 움직여 하루치 성적은 과장),
   구간 표본 8시간 미만은 흐림 처리. 기준값 전부 config(`CALIB_BIN_EDGES`·`CALIB_MIN_DAYS`·
   `CALIB_MIN_HOURS`·`ACTUALS_PAST_DAYS`).
-- [x] 단위 테스트 35개, 렌더 검증 34개 통과 + 실브라우저(맥북 M5, Playwright+Chrome headless,
+- [x] **전체 코드 리뷰 정비(2026-07-21)** — ①버그: n=0 시간(멤버 전부 결측)이 dry=0이라
+  "비 100% 예보"로 성적표 원장을 영구 오염 → calibrationEntries에서 스킵(+테스트)
+  ②원장 p 소수 3자리 반올림(부동소수 꼬리로 용량 1/3 낭비) ③sw fetch가 404/500도
+  캐시하던 것 res.ok 가드 ④snapshots prune의 toISOString UTC 하루 오차 → addDays로
+  ⑤loadActuals 하드코딩 URL → FORECAST_ENDPOINT ⑥ui el()의 미사용 innerHTML 분기
+  제거(잠재 XSS 표면) ⑦rain destroy의 visibilitychange 리스너 누수 ⑧"지난 N일" →
+  "N일치 기록"(방문 안 한 날 있으면 과장) ⑨jsdelivr preconnect. CACHE v6.
+- [x] 단위 테스트 36개, 렌더 검증 34개 통과 + 실브라우저(맥북 M5, Playwright+Chrome headless,
   데스크톱/폰, 성적표·초대문 두 상태) 확인. ※ 이 기기엔 dev-browser 없음 — `npx playwright`
   (chrome 채널)로 검증하는 방식이 실전 확인됨. `npm install` 선행 필요(jsdom).
 - ⚠ **sw.js 교훈**: SW network-first여도 브라우저 HTTP 캐시가 모듈 버전을 섞을 수 있음

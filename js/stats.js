@@ -207,6 +207,9 @@ export function calibrationEntries(predHours, actualsByTime, threshold) {
     if (!isNum(mm)) continue;
     const dry = h.fraction?.dry;
     if (!isNum(dry)) continue;
+    // an hour where no member voted has every fraction at 0 — dry=0 there would
+    // read as "said 100% rain" and permanently poison the ledger
+    if (h.n === 0) continue;
     out.push({ time: h.time, p: 1 - dry, wet: mm >= threshold });
   }
   return out;

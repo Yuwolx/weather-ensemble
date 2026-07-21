@@ -187,6 +187,12 @@ test('calibrationEntries: hours without actuals or fractions are skipped, not gu
   assert.equal(calibrationEntries(hours, actuals, RAIN_THRESHOLD_MM).length, 0);
 });
 
+test('calibrationEntries: an hour with zero voting members is skipped — its dry=0 would fake "100% 비"', () => {
+  const noVotes = { time: '2026-07-09T10:00', fraction: { dry: 0, light: 0, mod: 0, heavy: 0 }, n: 0 };
+  const actuals = new Map([['2026-07-09T10:00', 0]]);
+  assert.equal(calibrationEntries([noVotes], actuals, RAIN_THRESHOLD_MM).length, 0);
+});
+
 test('calibrationEntries: the 0.1mm boundary counts as rain (same line as everywhere)', () => {
   const e = calibrationEntries(
     [snapHour('2026-07-09T10:00', 0.5, 0.5, 0, 0)],

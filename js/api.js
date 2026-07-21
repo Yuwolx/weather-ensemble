@@ -123,7 +123,7 @@ export async function loadActuals(lat, lon) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 12000);
   try {
-    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`, { signal: ctrl.signal });
+    const res = await fetch(`${FORECAST_ENDPOINT}?${p}`, { signal: ctrl.signal });
     if (!res.ok) throw new Error(`actuals ${res.status}`);
     const json = await res.json();
     const times = json.hourly?.time || [];

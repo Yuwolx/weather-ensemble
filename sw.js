@@ -2,7 +2,7 @@
 // Strategy: network-first for our own files (so updates always show, no staleness),
 // falling back to cache when offline. Weather API calls are never cached — they
 // must be live. Bump CACHE on each deploy that changes the app shell.
-const CACHE = 'wx-ensemble-v5'; // v5: 확률 성적표(캘리브레이션) — stats/ui/main/config/css 변경
+const CACHE = 'wx-ensemble-v6'; // v6: 전체 리뷰 정비 — n=0 시간 원장 오염 수정 외 셸 파일 다수 변경
 const ASSETS = [
   './',
   './index.html',
@@ -43,8 +43,12 @@ self.addEventListener('fetch', (e) => {
     // must be all-new or all-cached, never a blend.
     fetch(e.request, { cache: 'no-cache' })
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        // only cache good responses — a cached 404/500 would replace a working
+        // copy and keep serving the failure offline
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
         return res;
       })
       .catch(() => caches.match(e.request)),

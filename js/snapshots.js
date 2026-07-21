@@ -6,6 +6,7 @@
 // user actually looked at. (돌아보기는 정보로만; 베팅/결산 UI는 부활 금지.)
 
 import { RETRO_KEEP_DAYS } from './config.js';
+import { addDays } from './format.js';
 
 const PREFIX = 'retro:';
 const keyOf = (region, date) => `${PREFIX}${region.lat.toFixed(2)},${region.lon.toFixed(2)}:${date}`;
@@ -44,9 +45,9 @@ export function getSnapshot(region, date) {
 
 function prune(todayDate) {
   try {
-    const cutoff = new Date(`${todayDate}T00:00`);
-    cutoff.setDate(cutoff.getDate() - RETRO_KEEP_DAYS);
-    const min = cutoff.toISOString().slice(0, 10);
+    // addDays keeps this in local date parts — toISOString here would shift the
+    // cutoff by the UTC offset (KST 00:00 → previous day 15:00Z, off by one)
+    const min = addDays(todayDate, -RETRO_KEEP_DAYS);
     const stale = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
@@ -122,7 +123,11 @@ export function appendCalibration(regionKey, entries) {
     const rec = JSON.parse(localStorage.getItem(CALIB_KEY) || '[]');
     const seen = new Set(rec.map((r) => `${r.rk}|${r.time}`));
     for (const e of entries) {
-      if (!seen.has(`${regionKey}|${e.time}`)) rec.push({ rk: regionKey, time: e.time, p: e.p, wet: e.wet });
+      // p rounded to 3 decimals: float-tail JSON ("0.30000000000000004") wastes
+      // a third of the ledger's byte budget for no informational gain
+      if (!seen.has(`${regionKey}|${e.time}`)) {
+        rec.push({ rk: regionKey, time: e.time, p: Math.round(e.p * 1000) / 1000, wet: e.wet });
+      }
     }
     const capped = rec.slice(-2000);
     localStorage.setItem(CALIB_KEY, JSON.stringify(capped));

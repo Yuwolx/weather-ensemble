@@ -13,7 +13,6 @@ function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(props)) {
     if (k === 'class') node.className = v;
-    else if (k === 'html') node.innerHTML = v;
     else if (k === 'text') node.textContent = v;
     else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
     else if (v !== null && v !== undefined) node.setAttribute(k, v);
@@ -350,7 +349,9 @@ export function renderRetro(container, data) {
         }),
       );
     } else {
-      parts.push(el('p', { class: 'retro__cap', text: `확률 성적표 — 지난 ${calib.days}일의 기록` }));
+      // "N일치": days counts dates that actually have records — visits can skip
+      // days, so "지난 N일" (a contiguous window) would overclaim
+      parts.push(el('p', { class: 'retro__cap', text: `확률 성적표 — ${calib.days}일치 기록` }));
       const rows = calib.bins
         .filter((b) => b.n > 0)
         .map((b) => {
