@@ -74,8 +74,19 @@ check('0% scenarios keep an honestly empty track', [...d.querySelectorAll('#boar
   const w = parseFloat(row.querySelector('.scenario__fill')?.style.width || '0');
   return !isZero || w === 0;
 }));
-check('retro shows the first-run invitation (no snapshot yet)',
-  (d.getElementById('retro')?.textContent || '').includes('기억해'));
+// baseline retro states, rendered directly so the check is deterministic
+// (the live #retro upgrades asynchronously once actuals arrive):
+// a true first visit gets the invitation; a device with a settled ledger
+// (we seeded one) gets the quiet "대조 중" instead of a flashing invitation
+const uiMod = await import('../js/ui.js');
+const probe = d.createElement('div');
+uiMod.renderRetro(probe, null);
+check('retro first-run baseline is the invitation', probe.textContent.includes('기억해'));
+uiMod.renderRetro(probe, null, { pending: true });
+check('returning-device baseline is "대조 중", not the invitation',
+  probe.textContent.includes('대조하는 중') && !probe.textContent.includes('기억해'));
+check('booted retro shows the pending line (calib ledger was seeded)',
+  /대조하는 중|확률 성적표/.test(d.getElementById('retro')?.textContent || ''));
 check('forecast snapshots saved for the visible days',
   dom.window.localStorage.length >= 2, `${dom.window.localStorage.length} keys`);
 check('board conditions is one compact line (temp·강수·바람)',
@@ -140,6 +151,8 @@ check('calib rows read "N시간 중 M시간 비 · P%"',
   [...calRows].every((r) => /\d+시간 중 \d+시간 비 · \d+%/.test(r.querySelector('.calib__result')?.textContent || '')));
 check('calib explainer states the reading rule',
   /막대.*세로선/.test(txt('#retro .calib__how') || ''), txt('#retro .calib__how'));
+check('브라이어 종합 점수 line renders with its yardstick',
+  /종합 확률 점수 0\.\d{2}.*0\.25/.test(txt('#retro .calib__brier') || ''), txt('#retro .calib__brier'));
 check('calibration ledger persisted and deduped',
   (() => { try { return JSON.parse(dom.window.localStorage.getItem('calib:v1')).length >= calSeed.length; } catch { return false; } })());
 

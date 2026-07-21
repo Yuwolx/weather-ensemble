@@ -909,6 +909,10 @@ body::after {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.calib__brier {
+  margin-top: 12px;
+  font-size: 13.5px;
+}
 .calib__how {
   margin: 10px 0 0;
   font-size: 11.5px;

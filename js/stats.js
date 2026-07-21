@@ -251,6 +251,21 @@ export function calibrationReport(entries, edges) {
   };
 }
 
+// One overall probability score for the ledger: mean squared gap between the
+// stated rain probability and what happened (Brier). 0 = perfect; always
+// guessing 50% scores 0.25 — the honest yardstick for "찍기보다 나은가".
+// Confident-and-wrong hurts more than humble-and-wrong, as it should.
+export function brierScore(entries) {
+  let n = 0;
+  let sum = 0;
+  for (const e of entries) {
+    if (!isNum(e.p)) continue;
+    n += 1;
+    sum += (e.p - (e.wet ? 1 : 0)) ** 2;
+  }
+  return n ? { n, score: sum / n } : null;
+}
+
 // How much the models agree, derived from an existing precip distribution: the
 // dominant scenario and the share of members backing it. share≈1 → strong consensus;
 // share near 1/#buckets → the models are all over the place (which is itself the

@@ -118,6 +118,18 @@ export const regionKeyOf = (region) => `${region.lat.toFixed(2)},${region.lon.to
 // double-count. Capped: ~2000 hours ≈ 80+ days of single-region records.
 const CALIB_KEY = 'calib:v1';
 
+// Has this device settled a retrospect before? Used to keep the first-run
+// invitation from flashing at returning users while actuals load. The calib
+// ledger (not retro:/pick: keys) is the tell — snapshots are saved for today
+// BEFORE the retro refresh, so they exist even on a true first visit.
+export function hasSettledHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(CALIB_KEY) || '[]').length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export function appendCalibration(regionKey, entries) {
   try {
     const rec = JSON.parse(localStorage.getItem(CALIB_KEY) || '[]');

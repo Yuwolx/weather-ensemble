@@ -205,14 +205,16 @@ export function hideTooltip() {
 // what the odds said then (if this device saw them), and how the user's own
 // hunches scored. Information only: an upset reads "작은 확률이 이겼다",
 // never "예보가 틀렸다".
-export function renderRetro(container, data) {
+export function renderRetro(container, data, { pending = false } = {}) {
   const head = el('p', { class: 'eyebrow', text: '돌아보기' });
   if (!data) {
     container.replaceChildren(
       head,
       el('p', {
         class: 'retro__empty',
-        text: '오늘 본 경우의 수를 이 기기가 기억해 뒀다가, 내일 실제 날씨와 대조해 보여드립니다. 시나리오를 골라 두면 당신의 예감도 함께 채점됩니다.',
+        text: pending
+          ? '어제 실제 날씨와 대조하는 중…'
+          : '오늘 본 경우의 수를 이 기기가 기억해 뒀다가, 내일 실제 날씨와 대조해 보여드립니다. 시나리오를 골라 두면 당신의 예감도 함께 채점됩니다.',
       }),
     );
     return;
@@ -370,6 +372,17 @@ export function renderRetro(container, data) {
           ]);
         });
       parts.push(el('div', { class: 'calib' }, rows));
+      // 종합 한 줄(브라이어) — 단일 헤드라인이 아니라 돌아보기의 조용한 장부 줄.
+      // 기준선을 같이 말해줘야 숫자가 읽힌다: 0 = 완벽, 늘 반반 찍기 = 0.25.
+      if (calib.brier) {
+        parts.push(
+          el('p', { class: 'retro__line calib__brier' }, [
+            el('strong', { text: '종합 확률 점수 ' }),
+            el('strong', { class: 'retro__pct num', text: calib.brier.score.toFixed(2) }),
+            ` — 0에 가까울수록 정확합니다. 늘 '반반'으로 찍으면 0.25.`,
+          ]),
+        );
+      }
       parts.push(
         el('p', {
           class: 'calib__how',

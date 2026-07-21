@@ -4,9 +4,9 @@
 import { REGIONS } from './regions.js';
 import { FAVORITES, PRECIP_BUCKETS, RAIN_THRESHOLD_MM, MOOD_THRESHOLDS, CALIB_BIN_EDGES, ACTUALS_PAST_DAYS } from './config.js';
 import { loadEnsemble, loadActuals, loadKma, getCurrentPosition, nearestRegion } from './api.js';
-import { analyzeHour, dayMood, agreement, classifyPrecip, precipDistribution, pickRetroHour, retroVerdict, summarizeActuals, settlePicks, forecastScore, calibrationEntries, calibrationReport } from './stats.js';
+import { analyzeHour, dayMood, agreement, classifyPrecip, precipDistribution, pickRetroHour, retroVerdict, summarizeActuals, settlePicks, forecastScore, calibrationEntries, calibrationReport, brierScore } from './stats.js';
 import { createRain } from './rain.js';
-import { saveDaySnapshots, getSnapshot, savePick, getPicks, appendRecord, getRecord, regionKeyOf, appendCalibration } from './snapshots.js';
+import { saveDaySnapshots, getSnapshot, savePick, getPicks, appendRecord, getRecord, regionKeyOf, appendCalibration, hasSettledHistory } from './snapshots.js';
 import { dateOf, addDays } from './format.js';
 import * as ui from './ui.js';
 
@@ -199,7 +199,10 @@ function renderBoard() {
 // hit-rate. Renders the invitation immediately, upgrades when actuals arrive.
 async function refreshRetro() {
   const region = state.region;
-  ui.renderRetro(refs.retro, null); // instant baseline; upgraded below
+  // instant baseline, upgraded below: a true first visit gets the invitation;
+  // a device that has settled before gets a quiet "대조 중" so the invitation
+  // doesn't flash at returning users while actuals load
+  ui.renderRetro(refs.retro, null, { pending: hasSettledHistory() });
   const yesterday = addDays(state.todayDate, -1);
   try {
     const actuals = await loadActuals(region.lat, region.lon);
@@ -239,7 +242,8 @@ async function refreshRetro() {
       const dayActuals = new Map([...actuals].filter(([t]) => dateOf(t) === dDate));
       calEntries.push(...calibrationEntries(hours, dayActuals, RAIN_THRESHOLD_MM));
     }
-    const calib = calibrationReport(appendCalibration(regionKeyOf(region), calEntries), CALIB_BIN_EDGES);
+    const ledger = appendCalibration(regionKeyOf(region), calEntries);
+    const calib = { ...calibrationReport(ledger, CALIB_BIN_EDGES), brier: brierScore(ledger) };
 
     // (3) the user's hunches, settled once into the running record
     const picks = getPicks(region, yesterday);

@@ -237,6 +237,35 @@ test('calibrationReport: no entries is an empty report, not a crash', () => {
   assert.equal(r.days, 0);
 });
 
+// 브라이어 점수: 종합 확률 점수 하나 — mean((말한 확률 − 실제)²).
+// 0 = 완벽, 늘 반반(50%)으로 찍으면 0.25가 나오는 게 기준선.
+import { brierScore } from '../js/stats.js';
+
+test('brierScore: perfect calls score 0, coin-flip guessing scores 0.25', () => {
+  const perfect = [
+    { p: 1, wet: true },
+    { p: 0, wet: false },
+  ];
+  assert.equal(brierScore(perfect).score, 0);
+  const coin = [
+    { p: 0.5, wet: true },
+    { p: 0.5, wet: false },
+  ];
+  assert.ok(Math.abs(brierScore(coin).score - 0.25) < 1e-9);
+});
+
+test('brierScore: confident-and-wrong is punished harder than humble-and-wrong', () => {
+  const humble = brierScore([{ p: 0.3, wet: true }]).score; // (0.3-1)² = 0.49
+  const cocky = brierScore([{ p: 0.05, wet: true }]).score; // (0.05-1)² ≈ 0.9
+  assert.ok(cocky > humble);
+  assert.ok(Math.abs(humble - 0.49) < 1e-9);
+});
+
+test('brierScore: empty or invalid entries return null, not NaN', () => {
+  assert.equal(brierScore([]), null);
+  assert.equal(brierScore([{ p: null, wet: true }]), null);
+});
+
 test('classifyPrecip puts values in the right bucket (half-open [min,max))', () => {
   assert.equal(classifyPrecip(0, PRECIP_BUCKETS), 'dry');
   assert.equal(classifyPrecip(0.09, PRECIP_BUCKETS), 'dry');

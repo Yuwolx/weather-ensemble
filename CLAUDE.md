@@ -118,7 +118,13 @@
   ⑤loadActuals 하드코딩 URL → FORECAST_ENDPOINT ⑥ui el()의 미사용 innerHTML 분기
   제거(잠재 XSS 표면) ⑦rain destroy의 visibilitychange 리스너 누수 ⑧"지난 N일" →
   "N일치 기록"(방문 안 한 날 있으면 과장) ⑨jsdelivr preconnect. CACHE v6.
-- [x] 단위 테스트 36개, 렌더 검증 34개 통과 + 실브라우저(맥북 M5, Playwright+Chrome headless,
+- [x] **리뷰 후속 2건(2026-07-21, 사용자 승인)** — ①`brierScore`(순수·TDD): 성적표에
+  "종합 확률 점수 0.19 — 0에 가까울수록 정확. 늘 '반반' 찍기면 0.25" 한 줄(기준선 함께
+  표기, 단일 헤드라인 아닌 돌아보기 장부 줄) ②재방문 깜빡임 제거: calib 원장 유무
+  (`hasSettledHistory` — retro:키는 첫 방문에도 refreshRetro 전에 저장되므로 부적합)로
+  첫 방문=초대문 / 재방문="대조하는 중…" 분기. dom-verify가 두 상태를 직접 렌더로
+  결정론 검증(기존 타이밍 의존 초대문 체크 대체). CACHE v7.
+- [x] 단위 테스트 39개, 렌더 검증 37개 통과 + 실브라우저(맥북 M5, Playwright+Chrome headless,
   데스크톱/폰, 성적표·초대문 두 상태) 확인. ※ 이 기기엔 dev-browser 없음 — `npx playwright`
   (chrome 채널)로 검증하는 방식이 실전 확인됨. `npm install` 선행 필요(jsdom).
 - ⚠ **sw.js 교훈**: SW network-first여도 브라우저 HTTP 캐시가 모듈 버전을 섞을 수 있음
@@ -142,8 +148,8 @@
 
 ## 다음 후보 (무료 서비스 방향 기준, 업데이트)
 
-1. ~~회고 확장 — 여러 날 누적 캘리브레이션~~ → **확률 성적표로 구현 완료(2026-07-21).**
-   남은 확장: 지역별 분리 보기, 기간 확대(원장 캡 상향), 브라이어 점수 같은 종합 지표.
+1. ~~회고 확장 — 누적 캘리브레이션·브라이어~~ → **확률 성적표+종합 점수로 완료(2026-07-21).**
+   남은 확장: 지역별 분리 보기, 기간 확대(원장 캡 상향), snapshots.js 스토리지 단위 테스트.
 2. 비/눈 분리(겨울), 기상청 **공식 발표** 예보(예보관 판단) 얹기는 공공데이터 키+프록시(Actions
    cron→정적 JSON) 필요 — KIM 수치모델 마커는 이미 있음(2026-07-10).
 - 위치: `Desktop\취업진로\weather-ensemble` · 원격 **github.com/Yuwolx/weather-ensemble (private)**
