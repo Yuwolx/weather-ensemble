@@ -156,6 +156,22 @@ check('브라이어 종합 점수 line renders with its yardstick',
 check('calibration ledger persisted and deduped',
   (() => { try { return JSON.parse(dom.window.localStorage.getItem('calib:v1')).length >= calSeed.length; } catch { return false; } })());
 
+// 돌아보기 dashboard: a real instrument now — day title, stats line, tappable
+// hour strip aligned to the actual timeline, per-hour detail board
+const retroCols = d.querySelectorAll('#retro .retro__col');
+check('retro dashboard has a day title', /어제의 결과/.test(txt('#retro .retro__title') || ''), txt('#retro .retro__title'));
+check('retro stats line summarizes the day', /실제/.test(txt('#retro .retro__stats') || ''), txt('#retro .retro__stats'));
+check('retro strip renders one tappable BUTTON per actual hour',
+  retroCols.length >= 20 && [...retroCols].every((c) => c.tagName === 'BUTTON'), `${retroCols.length} cols`);
+check('a story hour is pre-selected with its detail board (4 scenario rows)',
+  d.querySelectorAll('#retro .retro__col[aria-pressed="true"]').length === 1 &&
+  d.querySelectorAll('#retro .retro__brow').length === 4);
+check('the detail board marks what actually happened', !!d.querySelector('#retro .retro__tag--actual'));
+retroCols[2]?.click();
+check('tapping another retro hour moves the selection and rebuilds the detail',
+  d.querySelector('#retro .retro__col[aria-pressed="true"]')?.dataset.time === retroCols[2]?.dataset.time &&
+  d.querySelectorAll('#retro .retro__brow').length === 4);
+
 console.log('\n' + report.join('\n'));
 console.log(`\n지역: ${txt('#vRegion')}`);
 console.log(`보드: ${txt('#board .board__when')} — 우세 ${txt('#board .scenario.is-lead .scenario__label')} ${txt('#board .scenario.is-lead .scenario__pct')}`);

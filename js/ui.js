@@ -219,37 +219,84 @@ export function renderRetro(container, data, { pending = false } = {}) {
     );
     return;
   }
-  const { todayDate, actual, predicted, score, forecast, actualCells, pickCells, settled, record, calib } = data;
+  const { todayDate, date, days, actual, predicted, score, forecast, actualCells, pickCells, sel, settled, record, calib, onSelectDay, onSelectHour } = data;
   const parts = [head];
-  const predByTime = new Map((predicted?.hours || []).map((h) => [h.time, h.fraction]));
+  const predByTime = new Map((predicted?.hours || []).map((h) => [h.time, h]));
+  const dLabel = dayLabel(`${date}T00:00`, todayDate);
 
-  // (1) 어제를 오늘과 같은 그래프로: 예측했던 경우의 수 스트립, (예감 행,)
-  //     그리고 실제가 어떤 색이었는지 시간별 리본 — 전부 시간 정렬.
-  if (predicted) {
-    parts.push(
-      el('p', {
-        class: 'retro__cap retro__cap--strip',
-        text: predicted.source === 'snapshot' ? '어제 — 그때 화면의 경우의 수' : '어제 — 예보가 봤던 경우의 수',
+  // (1) 대시보드 머리: 어느 날의 대조인지 + 대조 가능한 다른 날 탭 + 하루 성적 요약.
+  //     돌아보기는 부가 기능이 아니라 이 앱의 반쪽 — 예보 보드와 같은 위계로.
+  parts.push(
+    el('div', { class: 'retro__head' }, [
+      el('h2', { class: 'retro__title', text: `${dLabel}의 결과` }),
+      days.length > 1
+        ? el('div', { class: 'daytabs retro__days', role: 'tablist', 'aria-label': '돌아볼 날짜' },
+            days.map((d) =>
+              el('button', {
+                class: 'daytab',
+                type: 'button',
+                role: 'tab',
+                'aria-selected': String(d === date),
+                text: dayLabel(`${d}T00:00`, todayDate),
+                onclick: () => onSelectDay(d),
+              }),
+            ),
+          )
+        : null,
+    ]),
+  );
+  const statBits = [
+    actual.rained
+      ? `실제 총 ${actual.totalMm.toFixed(1)}mm · 최다 ${hourLabel(actual.peakTime)} ${actual.peakMm.toFixed(1)}mm`
+      : '실제 — 비 없음',
+  ];
+  if (score) statBits.push(`우세 적중 ${score.hits}/${score.n}시간`, `실제에 준 평균 확률 ${pct(score.meanProb)}`);
+  parts.push(el('p', { class: 'retro__stats', text: statBits.join('  ·  ') }));
+
+  // (2) 그날을 오늘과 같은 그래프로: 예측했던 경우의 수 스트립(시각 탭 선택),
+  //     (예감 행,) 실제 리본 — 전부 실제 타임라인에 시간 정렬. 폰에선 가로 스크롤.
+  const graph = [];
+  graph.push(
+    el('p', {
+      class: 'retro__cap retro__cap--strip',
+      text:
+        (predicted.source === 'snapshot' ? '그때 화면의 경우의 수' : '예보가 봤던 경우의 수') +
+        ' — 눌러서 시각별 대조 보기',
+    }),
+  );
+  graph.push(
+    el('div', { class: 'retro__strip', role: 'group', 'aria-label': '시각별 대조 선택. 화살표 키로 이동합니다.' },
+      actualCells.map((c) => {
+        const h = predByTime.get(c.time);
+        const isSel = sel?.time === c.time;
+        const stack = el('div', { class: 'retro__colstack' });
+        if (h) {
+          for (const key of SEG_ORDER) {
+            const frac = h.fraction[key];
+            if (frac <= 0) continue;
+            stack.appendChild(el('div', { class: `col__seg col__seg--${key}`, style: `height:${frac * 100}%` }));
+          }
+        } else {
+          stack.appendChild(el('div', { class: 'retro__nopred' }));
+        }
+        return el('button', {
+          class: isSel ? 'retro__col is-sel' : 'retro__col',
+          type: 'button',
+          'aria-pressed': String(isSel),
+          'data-time': c.time,
+          'aria-label': `${hourLabel(c.time)} 대조 보기`,
+          title: h
+            ? `${hourLabel(c.time)} — ${PRECIP_BUCKETS.filter((b) => h.fraction[b.key] > 0)
+                .map((b) => `${b.label} ${pct(h.fraction[b.key])}`)
+                .join(' · ')}`
+            : `${hourLabel(c.time)} — 이 시각의 예보 기록 없음`,
+          onclick: () => onSelectHour(c.time),
+        }, stack);
       }),
-    );
-    const cols = predicted.hours.map((h) => {
-      const stack = el('div', {
-        class: 'retro__col',
-        title: `${hourLabel(h.time)} — ${PRECIP_BUCKETS.filter((b) => h.fraction[b.key] > 0)
-          .map((b) => `${b.label} ${pct(h.fraction[b.key])}`)
-          .join(' · ')}`,
-      });
-      for (const key of SEG_ORDER) {
-        const frac = h.fraction[key];
-        if (frac <= 0) continue;
-        stack.appendChild(el('div', { class: `col__seg col__seg--${key}`, style: `height:${frac * 100}%` }));
-      }
-      return stack;
-    });
-    parts.push(el('div', { class: 'retro__strip' }, cols));
-  }
+    ),
+  );
   if (pickCells) {
-    parts.push(
+    graph.push(
       el('div', { class: 'retro__ribbonrow' }, [
         el('span', { class: 'retro__cap retro__cap--ribbon', text: '예감' }),
         el('div', { class: 'retro__ribbon' },
@@ -268,28 +315,62 @@ export function renderRetro(container, data, { pending = false } = {}) {
       ]),
     );
   }
-  parts.push(
+  graph.push(
     el('div', { class: 'retro__ribbonrow' }, [
       el('span', { class: 'retro__cap retro__cap--ribbon', text: '실제' }),
       el('div', { class: 'retro__ribbon' },
         actualCells.map((c) => {
-          const predFrac = predByTime.get(c.time)?.[c.key];
+          const predFrac = predByTime.get(c.time)?.fraction?.[c.key];
           return el('span', {
             class: 'retro__cell',
             style: `background:var(--p-${c.key})`,
             title:
               `${hourLabel(c.time)} 실제 '${bucketOf(c.key).label}'` +
+              (c.mm >= 0.1 ? ` ${c.mm.toFixed(1)}mm` : '') +
               (predFrac != null ? ` — 그때 확률 ${pct(predFrac)}` : ''),
           });
         }),
       ),
     ]),
   );
-  parts.push(
+  graph.push(
     el('div', { class: 'retro__ticks', 'aria-hidden': 'true' },
       actualCells.map((c, i) => el('span', { text: i % 6 === 0 ? `${hourOf(c.time)}시` : '' })),
     ),
   );
+  parts.push(el('div', { class: 'retroscroll' }, el('div', { class: 'retroinner' }, graph)));
+
+  // (2.5) 선택 시각의 상세: 그때의 네 시나리오와 확률, 실제로 일어난 것과 나의 예감을
+  //       같은 행 위에 표시 — 오늘의 보드와 같은 문법으로 어제를 읽는다.
+  if (sel) {
+    parts.push(el('p', { class: 'retro__cap retro__cap--board', text: `${hourLabel(sel.time)} — 그때의 경우의 수와 실제` }));
+    if (sel.fraction) {
+      const rows = PRECIP_BUCKETS.map((b) => {
+        const frac = sel.fraction[b.key];
+        const isActual = b.key === sel.actualKey;
+        const cls = ['retro__brow'];
+        if (isActual) cls.push('is-actual');
+        return el('div', { class: cls.join(' ') }, [
+          el('span', { class: 'retro__blabelcell' }, [
+            el('span', { class: 'retro__blabel', text: b.label }),
+            isActual
+              ? el('span', { class: 'retro__tag retro__tag--actual', text: `실제${typeof sel.mm === 'number' && sel.mm >= 0.1 ? ` ${sel.mm.toFixed(1)}mm` : ''}` })
+              : null,
+            b.key === sel.picked ? el('span', { class: 'retro__tag retro__tag--pick', text: '나의 예감' }) : null,
+          ]),
+          el('span', { class: 'retro__btrack' }, [
+            el('span', { class: 'retro__bfill', style: `width:${frac > 0 ? Math.max(frac * 100, 1.5) : 0}%;background:var(--p-${b.key})` }),
+          ]),
+          el('span', { class: 'retro__bpct num', text: pct(frac) }),
+        ]);
+      });
+      parts.push(el('div', { class: 'retro__board' }, rows));
+    } else {
+      parts.push(
+        el('p', { class: 'retro__line', text: '이 시각의 예보 기록이 없습니다 — 그날 처음 화면을 본 시각부터만 저장됩니다.' }),
+      );
+    }
+  }
 
   // (2) 판정 — 일어난 결과에 그때 얼마의 확률이 걸려 있었는지가 이 문장의 주인공
   if (forecast) {
@@ -313,30 +394,8 @@ export function renderRetro(container, data, { pending = false } = {}) {
         tail,
       ]),
     );
-  } else {
-    parts.push(
-      el('p', { class: 'retro__line' }, [
-        el('strong', { text: '어제 실제' }),
-        actual.rained
-          ? ` — ${hourLabel(actual.peakTime)}에 가장 세게(${actual.peakMm.toFixed(1)}mm), 하루 ${actual.totalMm.toFixed(1)}mm.`
-          : ' — 비는 오지 않았습니다.',
-      ]),
-    );
   }
-
-  // (2.5) 어제의 예보 성적 — 우세 적중률 + 실제 일어난 일에 줬던 평균 확률
-  if (score) {
-    parts.push(
-      el('p', { class: 'retro__line retro__score' }, [
-        el('strong', { text: '어제의 예보 성적' }),
-        ` — ${score.n}시간 중 ${score.hits}시간 우세 적중(`,
-        el('strong', { class: 'retro__pct', text: pct(score.hitRate) }),
-        `), 실제 일어난 날씨에 평균 `,
-        el('strong', { class: 'retro__pct', text: pct(score.meanProb) }),
-        `의 확률을 주고 있었습니다.`,
-      ]),
-    );
-  }
+  // (그날의 총량·적중률·평균 확률은 위 요약 줄이 담당 — 문장 중복은 두지 않는다)
 
   // (2.7) 확률 성적표 — "N%라고 했을 때 실제로 그만큼 왔나"를 확률대별 한 줄씩.
   // 막대 = 실제 비 온 비율, 세로선 = 그때 말한 평균 확률: 겹칠수록 믿을 만한 확률.

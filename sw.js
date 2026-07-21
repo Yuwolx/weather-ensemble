@@ -2,7 +2,7 @@
 // Strategy: network-first for our own files (so updates always show, no staleness),
 // falling back to cache when offline. Weather API calls are never cached — they
 // must be live. Bump CACHE on each deploy that changes the app shell.
-const CACHE = 'wx-ensemble-v7'; // v7: 브라이어 종합 점수 + 재방문 시 돌아보기 초대문 깜빡임 제거
+const CACHE = 'wx-ensemble-v8'; // v8: 돌아보기 대시보드 승격 — 날짜 탭·시각 선택 스트립·상세 보드
 const ASSETS = [
   './',
   './index.html',

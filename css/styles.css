@@ -716,11 +716,41 @@ body::after {
   color: var(--ink-subtle);
 }
 
-/* 돌아보기 — a quiet ledger line, not a scoreboard */
+/* 돌아보기 — the app's other half: a dashboard in the same grammar as the
+   forecast board (day tabs, tappable hour strip, per-hour scenario rows),
+   still no boxes — hairlines, type hierarchy and quiet gauges carry it */
 .retro {
-  margin-top: 40px;
-  padding-top: 16px;
+  margin-top: 48px;
+  padding-top: 18px;
   border-top: 1px solid rgba(23, 24, 28, 0.07);
+}
+.retro__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.retro__title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+.retro__days {
+  gap: 16px;
+}
+.retro__days .daytab {
+  font-size: 13.5px;
+  padding-bottom: 6px;
+}
+.retro__stats {
+  margin: 8px 0 0;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  color: var(--ink-subtle);
 }
 .retro__empty {
   margin: 8px 0 0;
@@ -753,18 +783,39 @@ body::after {
   display: flex;
   gap: 4px;
   align-items: flex-end;
-  height: 64px;
+  height: 108px;
   max-width: calc(640px - 36px); /* caption offset: stays hour-aligned with ribbon cells */
   margin-left: 36px;
 }
+/* hour columns are buttons now — same instrument language as the main strip */
 .retro__col {
   flex: 1 1 0;
   min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.retro__colstack {
   display: flex;
   flex-direction: column;
   height: 100%;
   border-radius: 3px 3px 0 0;
   overflow: hidden;
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.retro__col:hover .retro__colstack {
+  transform: translateY(-3px);
+}
+.retro__col.is-sel .retro__colstack {
+  box-shadow: 0 0 0 2px rgba(47, 127, 224, 0.75);
+  transform: translateY(-3px);
+}
+/* hours before this device first saw that day: honestly empty, not guessed */
+.retro__nopred {
+  height: 100%;
+  background: rgba(23, 24, 28, 0.045);
 }
 .retro__ribbonrow {
   display: flex;
@@ -825,6 +876,71 @@ body::after {
   font-size: 10px;
   color: var(--ink-faint);
   white-space: nowrap;
+}
+/* selected hour's detail — yesterday read through today's board grammar */
+.retro__cap--board {
+  margin-top: 20px;
+}
+.retro__board {
+  max-width: 640px;
+}
+.retro__brow {
+  display: grid;
+  grid-template-columns: 148px 1fr 56px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+}
+.retro__brow + .retro__brow {
+  border-top: 1px solid rgba(23, 24, 28, 0.06);
+}
+.retro__blabelcell {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+.retro__blabel {
+  font-size: 13.5px;
+  color: var(--ink-subtle);
+}
+.retro__brow.is-actual .retro__blabel {
+  color: var(--ink);
+  font-weight: 650;
+}
+.retro__tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.retro__tag--actual {
+  color: var(--ink);
+}
+.retro__tag--pick {
+  color: var(--p-mod);
+}
+.retro__btrack {
+  position: relative;
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(23, 24, 28, 0.07);
+}
+.retro__bfill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+}
+.retro__bpct {
+  font-size: 12.5px;
+  text-align: right;
+  color: var(--ink-subtle);
+}
+.retro__brow.is-actual .retro__bpct {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
 }
 .retro__hunches {
   margin-top: 14px;
@@ -1083,6 +1199,28 @@ body::after {
   .stripscroll .stripwrap,
   .stripscroll .strip__times {
     min-width: 640px;
+  }
+  /* 돌아보기 graph block scrolls the same way — strip, pick row, actual ribbon
+     and ticks stay hour-aligned inside one shared inner width */
+  .retroscroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .retroscroll::-webkit-scrollbar {
+    display: none;
+  }
+  .retroscroll .retroinner {
+    min-width: 640px;
+  }
+  .retro__strip {
+    height: 92px;
+  }
+  .retro__brow {
+    grid-template-columns: 118px 1fr 48px;
+    gap: 10px;
   }
   .sheet__head {
     align-items: baseline;

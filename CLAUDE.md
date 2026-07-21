@@ -124,9 +124,20 @@
   (`hasSettledHistory` — retro:키는 첫 방문에도 refreshRetro 전에 저장되므로 부적합)로
   첫 방문=초대문 / 재방문="대조하는 중…" 분기. dom-verify가 두 상태를 직접 렌더로
   결정론 검증(기존 타이밍 의존 초대문 체크 대체). CACHE v7.
-- [x] 단위 테스트 39개, 렌더 검증 37개 통과 + 실브라우저(맥북 M5, Playwright+Chrome headless,
-  데스크톱/폰, 성적표·초대문 두 상태) 확인. ※ 이 기기엔 dev-browser 없음 — `npx playwright`
-  (chrome 채널)로 검증하는 방식이 실전 확인됨. `npm install` 선행 필요(jsdom).
+- [x] **돌아보기 대시보드 승격(2026-07-21, 사용자 "부가 기능이 아닌 메인 기능")** —
+  오늘의 예보와 같은 문법으로 과거를 읽는 대시보드: ①머리 = "어제의 결과" h2 +
+  **날짜 탭**(대조 가능한 지난 7일 — 어제는 스냅샷/보관예보, 그 이전은 스냅샷 있는 날만)
+  + 하루 성적 요약 한 줄(총 강수·최다 시각·우세 적중·실제에 준 평균 확률; 기존 성적
+  문장은 이 줄로 흡수) ②스트립 108px로 확대 + **시각 탭 선택**(버튼화, 화살표 키 이동,
+  실제 타임라인에 정렬 — 스냅샷이 하루 중간부터면 이전 시각은 정직한 빈 칸
+  `retro__nopred`) ③선택 시각 **상세 보드**: 네 시나리오 확률 트랙 + '실제 N.Nmm'/
+  '나의 예감' 태그를 같은 행에(기본 선택 = pickRetroHour의 스토리 시각) ④판정 문장·
+  성적표·예감 통산 유지. main.js에 state.retro(days/selDate/selHour) +
+  renderRetroSection 분리, 예감 채점도 지난 7일 전부 정산(dedup이 재방문 무해화).
+  폰: retroscroll 가로 스크롤(스트립·리본·눈금 정렬 유지).
+- [x] 단위 테스트 39개, 렌더 검증 43개 통과 + 실브라우저(맥북 M5, Playwright+Chrome headless,
+  데스크톱/폰, 날짜 탭 전환·시각 선택·상세 보드 확인). ※ 이 기기엔 dev-browser 없음 —
+  `npx playwright`(chrome 채널)로 검증하는 방식이 실전 확인됨. `npm install` 선행 필요(jsdom).
 - ⚠ **sw.js 교훈**: SW network-first여도 브라우저 HTTP 캐시가 모듈 버전을 섞을 수 있음
   (새 main.js + 옛 config.js로 부팅 사망 실측). fetch `cache:'no-cache'` + 셸 변경 시 CACHE 버전 범프 필수.
 - 단순화 커밋에서 제거된 것: 기온 p10–p90 밴드 차트, 레일 판정문/미니라인, 하루 요약, 바람 그래프.

@@ -24,6 +24,7 @@ const state = {
   nowTime: null,
   yesterdayDists: [],
   kma: null, // Map time→mm from the 기상청 KIM model (marker on the board)
+  retro: null, // 돌아보기 dashboard state: comparable days + day/hour selection
 };
 
 const $ = (id) => document.getElementById(id);
@@ -194,81 +195,117 @@ function renderBoard() {
   });
 }
 
-// 돌아보기: yesterday's actual weather (always), the odds this device saw then
-// (if a snapshot exists), and the user's own hunches settled into a running
-// hit-rate. Renders the invitation immediately, upgrades when actuals arrive.
+// 돌아보기 — the app's other half, a dashboard not a footnote: every past day
+// this device can compare (snapshot or archived forecast vs actuals) becomes a
+// browsable page — day tabs, a tappable hour strip, and a per-hour detail board
+// in the same grammar as today's forecast. Renders a baseline immediately,
+// upgrades when actuals arrive.
 async function refreshRetro() {
   const region = state.region;
-  // instant baseline, upgraded below: a true first visit gets the invitation;
-  // a device that has settled before gets a quiet "대조 중" so the invitation
-  // doesn't flash at returning users while actuals load
+  state.retro = null;
+  // instant baseline: a true first visit gets the invitation; a device that has
+  // settled before gets a quiet "대조 중" so the invitation doesn't flash
   ui.renderRetro(refs.retro, null, { pending: hasSettledHistory() });
-  const yesterday = addDays(state.todayDate, -1);
   try {
     const actuals = await loadActuals(region.lat, region.lon);
     if (state.region !== region) return; // user moved on mid-fetch
-    const yActuals = new Map([...actuals].filter(([t]) => dateOf(t) === yesterday));
-    if (!yActuals.size) return;
 
-    // (1) yesterday's predicted distribution — the device's own snapshot if it
-    // saw one (그때 화면), else the archived forecast from the API (콜드스타트)
-    const snap = getSnapshot(region, yesterday);
-    const predicted = snap
-      ? { hours: snap.hours, source: 'snapshot' }
-      : state.yesterdayDists.length
-        ? { hours: state.yesterdayDists, source: 'api' }
-        : null;
-
-    // (2) the verdict: what happened, and what odds it had been given
-    let forecast = null;
-    if (predicted) {
-      const picked = pickRetroHour(predicted.hours, yActuals);
-      if (picked) {
-        forecast = {
-          time: picked.time,
-          mm: picked.mm,
-          verdict: retroVerdict(picked.snap.fraction, picked.mm, PRECIP_BUCKETS),
-        };
-      }
-    }
-
-    // (2.7) 확률 성적표: settle every past day we have both a forecast and
-    // actuals for — yesterday always, older days when a snapshot survives.
-    const calEntries = [];
+    // comparable past days, newest first — yesterday may fall back to the
+    // archived forecast riding in the main payload (콜드스타트); older days
+    // need a snapshot this device saved back when they were still the future
+    const days = [];
     for (let back = 1; back <= ACTUALS_PAST_DAYS; back++) {
-      const dDate = addDays(state.todayDate, -back);
-      const hours = back === 1 ? predicted?.hours : getSnapshot(region, dDate)?.hours;
-      if (!hours?.length) continue;
-      const dayActuals = new Map([...actuals].filter(([t]) => dateOf(t) === dDate));
-      calEntries.push(...calibrationEntries(hours, dayActuals, RAIN_THRESHOLD_MM));
+      const date = addDays(state.todayDate, -back);
+      const snap = getSnapshot(region, date);
+      const predicted = snap
+        ? { hours: snap.hours, source: 'snapshot' }
+        : back === 1 && state.yesterdayDists.length
+          ? { hours: state.yesterdayDists, source: 'api' }
+          : null;
+      if (!predicted?.hours?.length) continue;
+      const dayActuals = new Map([...actuals].filter(([t]) => dateOf(t) === date));
+      if (!dayActuals.size) continue;
+      days.push({ date, predicted, actuals: dayActuals, picks: getPicks(region, date) });
+    }
+    if (!days.length) return;
+
+    // settle everything into the device ledgers (dedup makes re-visits no-ops)
+    const calEntries = [];
+    let record = null;
+    for (const d of days) {
+      calEntries.push(...calibrationEntries(d.predicted.hours, d.actuals, RAIN_THRESHOLD_MM));
+      const settled = settlePicks(d.picks, d.actuals, PRECIP_BUCKETS);
+      if (settled.length) record = appendRecord(regionKeyOf(region), settled);
     }
     const ledger = appendCalibration(regionKeyOf(region), calEntries);
-    const calib = { ...calibrationReport(ledger, CALIB_BIN_EDGES), brier: brierScore(ledger) };
 
-    // (3) the user's hunches, settled once into the running record
-    const picks = getPicks(region, yesterday);
-    const settled = settlePicks(picks, yActuals, PRECIP_BUCKETS);
-    const record = settled.length ? appendRecord(regionKeyOf(region), settled) : getRecord();
-
-    const actualCells = [...yActuals]
-      .sort(([a], [b]) => (a < b ? -1 : 1))
-      .map(([time, mm]) => ({ time, key: classifyPrecip(mm ?? 0, PRECIP_BUCKETS) }));
-
-    ui.renderRetro(refs.retro, {
-      todayDate: state.todayDate,
-      actual: summarizeActuals(yActuals),
-      predicted,
-      score: predicted ? forecastScore(predicted.hours, yActuals, PRECIP_BUCKETS) : null,
-      forecast,
-      actualCells,
-      pickCells: Object.keys(picks).length ? actualCells.map(({ time }) => ({ time, picked: picks[time] || null })) : null,
-      settled,
-      record,
-      calib,
-    });
+    state.retro = {
+      region,
+      days,
+      calib: { ...calibrationReport(ledger, CALIB_BIN_EDGES), brier: brierScore(ledger) },
+      record: record || getRecord(),
+      selDate: days[0].date,
+      selHour: null, // null → the day's story hour, chosen at render
+    };
+    renderRetroSection();
   } catch {
-    /* actuals unavailable — the invitation stays */
+    /* actuals unavailable — the baseline stays */
   }
+}
+
+function renderRetroSection() {
+  const r = state.retro;
+  if (!r || state.region !== r.region) return;
+  const day = r.days.find((d) => d.date === r.selDate) || r.days[0];
+  const story = pickRetroHour(day.predicted.hours, day.actuals);
+  const selHour = r.selHour && day.actuals.has(r.selHour) ? r.selHour : (story?.time ?? null);
+  const predByTime = new Map(day.predicted.hours.map((h) => [h.time, h]));
+
+  const actualCells = [...day.actuals]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([time, mm]) => ({ time, mm, key: classifyPrecip(mm ?? 0, PRECIP_BUCKETS) }));
+
+  let sel = null;
+  if (selHour) {
+    const mm = day.actuals.get(selHour);
+    const pred = predByTime.get(selHour);
+    sel = {
+      time: selHour,
+      mm,
+      fraction: pred?.fraction || null,
+      actualKey: classifyPrecip(mm ?? 0, PRECIP_BUCKETS),
+      picked: day.picks[selHour] || null,
+    };
+  }
+
+  ui.renderRetro(refs.retro, {
+    todayDate: state.todayDate,
+    date: day.date,
+    days: r.days.map((d) => d.date),
+    predicted: day.predicted,
+    actual: summarizeActuals(day.actuals),
+    score: forecastScore(day.predicted.hours, day.actuals, PRECIP_BUCKETS),
+    forecast: story
+      ? { time: story.time, mm: story.mm, verdict: retroVerdict(story.snap.fraction, story.mm, PRECIP_BUCKETS) }
+      : null,
+    actualCells,
+    pickCells: Object.keys(day.picks).length
+      ? actualCells.map(({ time }) => ({ time, picked: day.picks[time] || null }))
+      : null,
+    sel,
+    settled: settlePicks(day.picks, day.actuals, PRECIP_BUCKETS),
+    record: r.record,
+    calib: r.calib,
+    onSelectDay: (date) => {
+      r.selDate = date;
+      r.selHour = null;
+      renderRetroSection();
+    },
+    onSelectHour: (time) => {
+      r.selHour = time;
+      renderRetroSection();
+    },
+  });
 }
 
 // Tap a scenario = declare a hunch (toggle). Persisted per hour so tomorrow's
@@ -382,6 +419,21 @@ refs.strip.cols.addEventListener('keydown', (e) => {
   const next = Math.max(0, Math.min(state.hours.length - 1, state.selected + delta));
   selectHour(next);
   refs.strip.cols.querySelector(`.col[data-i="${next}"]`)?.focus();
+});
+
+// retro strip keyboard navigation — same arrows as the main strip; the section
+// re-renders on select, so focus is restored onto the newly built button
+refs.retro.addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const btn = e.target.closest?.('.retro__col');
+  if (!btn || !state.retro) return;
+  e.preventDefault();
+  const cols = [...refs.retro.querySelectorAll('.retro__col')];
+  const next = cols[cols.indexOf(btn) + (e.key === 'ArrowRight' ? 1 : -1)];
+  if (!next) return;
+  state.retro.selHour = next.dataset.time;
+  renderRetroSection();
+  refs.retro.querySelector(`.retro__col[data-time="${next.dataset.time}"]`)?.focus();
 });
 
 // ---- boot ------------------------------------------------------------------
