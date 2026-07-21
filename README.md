@@ -1,5 +1,7 @@
 # 기상 합의 · 앙상블 날씨 (weather-ensemble)
 
+**▶ 서비스: https://yuwolx.github.io/weather-ensemble/** (무료 · 설치형 PWA — 폰에서 "홈 화면에 추가")
+
 기상청 하나만 믿기 어려워서 만든, **여러 예보 모델을 그대로 모아 날씨를 하나의 숫자가 아닌
 확률 분포로 보여주는** 웹앱.
 
